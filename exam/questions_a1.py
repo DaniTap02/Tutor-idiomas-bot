@@ -27,10 +27,19 @@ SPEAKING_PROMPT = {
     "es": "Envía una nota de voz (15 a 30 segundos): di tu nombre, dónde vives y algo que te gusta.",
 }
 
-# Qué debe cumplir el texto para considerarse "tarea completada" (se lo pasamos al calificador)
+# Requisitos de la tarea. El calificador verifica cada uno por separado (más fiable en modelos chicos).
+# check: lo que ve el modelo (en inglés) · label_es: lo que ve el usuario si le falta.
 TASK_CHECKLIST = {
-    "writing": "name, where the person is from, and something they like",
-    "speaking": "name, where the person lives, and something they like",
+    "writing": [
+        {"id": "req1", "check": "the student says their name", "label_es": "tu nombre"},
+        {"id": "req2", "check": "the student says where they are from", "label_es": "de dónde eres"},
+        {"id": "req3", "check": "the student says something they like", "label_es": "algo que te gusta"},
+    ],
+    "speaking": [
+        {"id": "req1", "check": "the student says their name", "label_es": "tu nombre"},
+        {"id": "req2", "check": "the student says where they live", "label_es": "dónde vives"},
+        {"id": "req3", "check": "the student says something they like", "label_es": "algo que te gusta"},
+    ],
 }
 
 

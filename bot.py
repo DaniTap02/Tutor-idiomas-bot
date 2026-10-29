@@ -1,4 +1,3 @@
-
 import os
 import logging
 import random
@@ -8,10 +7,21 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import (
     Application,
+    CallbackQueryHandler,
     CommandHandler,
     MessageHandler,
+    PicklePersistence,
     ContextTypes,
     filters,
+)
+
+from exam.telegram_flow import (
+    elegir_idioma,
+    en_examen,
+    iniciar_examen,
+    responder_lectura,
+    texto_de_examen,
+    tiene_nivel,
 )
 
 load_dotenv()
@@ -71,17 +81,38 @@ async def start(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+    # Primera vez: examen de ubicación
+    if en_examen(context):
+        await update.message.reply_text(
+            "Tienes un examen en curso. ¡Sigue respondiendo! 💪"
+        )
+        return
+
+    if not tiene_nivel(context):
+        await iniciar_examen(update, context)
+        return
+
+    # Ya tiene nivel: menú normal
+    nivel = context.user_data["nivel"]["level"]
     await update.message.reply_text(
-        "¡Hola! 👋 Soy tu Tutor de Español.\n\n"
-        "Aprenderemos vocabulario y gramática con ejercicios "
-        "y explicaciones.\n\n"
+        f"¡Hola de nuevo! 👋 Tu nivel actual es {nivel}.\n\n"
         "Comandos disponibles:\n"
         "/practicar - Comenzar un ejercicio\n"
         "/siguiente - Cambiar de ejercicio\n"
         "/puntos - Consultar tu puntuación\n"
         "/help - Ver la ayuda\n\n"
-        "Escribe /practicar para comenzar. 🇪🇸"
+        "Escribe /practicar para comenzar."
     )
+
+
+async def reiniciar(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    """Solo para pruebas: borra el nivel y vuelve a lanzar el examen."""
+    context.user_data.pop("nivel", None)
+    context.user_data.pop("examen", None)
+    await iniciar_examen(update, context)
 
 
 async def help_command(
@@ -103,6 +134,12 @@ async def practicar(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+    if en_examen(context):
+        await update.message.reply_text(
+            "Primero termina el examen de nivel 📝"
+        )
+        return
+
     ejercicio = random.choice(EJERCICIOS)
 
     context.user_data["ejercicio"] = ejercicio
@@ -125,6 +162,10 @@ async def responder(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+    # Si el usuario está en el examen, ese flujo atiende el mensaje
+    if await texto_de_examen(update, context):
+        return
+
     mensaje = update.message.text.strip()
     texto = normalizar(mensaje)
 
@@ -205,13 +246,18 @@ def main():
             "No se encontró TELEGRAM_BOT_TOKEN en el archivo .env"
         )
 
-    app = Application.builder().token(TOKEN).build()
+    # Guarda user_data en disco: el nivel del usuario sobrevive al reiniciar el bot
+    persistence = PicklePersistence(filepath="datos_bot.pkl")
+    app = Application.builder().token(TOKEN).persistence(persistence).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("reiniciar", reiniciar))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("practicar", practicar))
     app.add_handler(CommandHandler("siguiente", siguiente))
     app.add_handler(CommandHandler("puntos", puntos))
+    app.add_handler(CallbackQueryHandler(elegir_idioma, pattern=r"^lang:"))
+    app.add_handler(CallbackQueryHandler(responder_lectura, pattern=r"^ans:"))
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, responder)
     )

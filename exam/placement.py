@@ -5,9 +5,10 @@ MIN_PER_PART = 60   # cada parte (lectura, escritura, habla) debe sacar al menos
 MIN_AVERAGE = 70    # y el promedio de las tres partes al menos esto
 
 
-def level_passed(reading: float, writing: float, speaking: float) -> bool:
-    scores = [reading, writing, speaking]
-    return all(s >= MIN_PER_PART for s in scores) and sum(scores) / 3 >= MIN_AVERAGE
+def level_passed(reading: float, writing: float, speaking: float | None = None) -> bool:
+    """speaking=None significa que la parte de habla aún no se evalúa: se promedian solo las demás."""
+    scores = [s for s in (reading, writing, speaking) if s is not None]
+    return all(s >= MIN_PER_PART for s in scores) and sum(scores) / len(scores) >= MIN_AVERAGE
 
 
 def next_step(level: str, passed: bool) -> dict:

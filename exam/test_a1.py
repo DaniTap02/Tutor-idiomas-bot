@@ -6,7 +6,10 @@ from exam.questions_a1 import TASK_CHECKLIST, score_reading
 SAMPLES = {
     "bueno": "My name is Laura. I am from Colombia. I like music and dogs.",
     "con errores": "My name Laura. I from Colombia. I likes music.",
-    "no cumple la tarea": "The weather is nice today.",
+    "no cumple la tarea": "The weather is nice today and the sky is blue.",
+    "muy corto (hola)": "hola",
+    "otro idioma": "Me llamo Laura. Soy de Colombia. Me gusta la música.",
+    "falta un requisito": "My name is Laura. I am from Colombia.",
 }
 
 if __name__ == "__main__":
