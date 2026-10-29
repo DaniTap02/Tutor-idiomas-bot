@@ -32,7 +32,9 @@ Your job is ONLY to check the text and detect errors. Do not give a level.
 2. requirements: answer true only if the text clearly satisfies the requirement.
 {requirements}
 3. errors: list each real error once (grammar, vocabulary or spelling) that a {level} student
-   should be able to avoid. Do not invent errors. Use an empty list if there are none.
+   should be able to avoid. Only list something if the original is actually incorrect: never
+   "correct" a sentence that is already right, and never list a mere stylistic alternative.
+   Use an empty list if there are none.
 4. feedback: one short encouraging sentence in {feedback_language}.
 
 Reply ONLY with JSON in this exact shape:
@@ -59,6 +61,32 @@ def _call_ollama(system: str, user: str) -> dict:
     )
     response.raise_for_status()
     return json.loads(response.json()["message"]["content"])
+
+
+VERIFY_PROMPT = """You are a strict {language} grammar checker.
+For each numbered item, decide if the fragment contains a REAL mistake (grammar, spelling or a wrong word).
+If the fragment is already correct, or the correction is only another way of saying the same thing, answer false.
+
+Reply ONLY with JSON: {{"items": [true or false, ...]}} with one value per item, in the same order."""
+
+
+def _verify_errors(errors: list, language: str) -> list:
+    """Segunda pasada: descarta falsos errores (frases correctas que el modelo 'corrigió' sin necesidad).
+    Si algo sale mal, se conservan los errores originales."""
+    if not errors:
+        return errors
+    try:
+        listing = "\n".join(
+            f"{i}. fragment: {e.get('fragment', '')} | correction: {e.get('correction', '')}"
+            for i, e in enumerate(errors, start=1)
+        )
+        verdict = _call_ollama(VERIFY_PROMPT.format(language=LANGUAGE_NAME[language]), listing)
+        items = verdict.get("items", [])
+        if len(items) != len(errors):
+            return errors
+        return [e for e, real in zip(errors, items) if real is True or str(real).lower() == "true"]
+    except Exception:
+        return errors
 
 
 def grade(
@@ -115,7 +143,7 @@ def grade(
 
     answers = result.get("requirements", {}) or {}
     missing = [c for c in checklist if not answers.get(c["id"], False)]
-    errors = result.get("errors", []) or []
+    errors = _verify_errors(result.get("errors", []) or [], language)
 
     score = max(0, 100 - PENALTY_PER_ERROR[level] * len(errors) - MISSING_PENALTY * len(missing))
 
