@@ -1,0 +1,57 @@
+COMANDOS PARA PROBAR EL EXAMEN A1 (terminal de Visual Studio Code)
+==================================================================
+
+ANTES DE EMPEZAR
+- Copia los dos archivos nuevos a la carpeta exam/, reemplazando los anteriores:
+    question_generator.py
+    questions_a1.py
+- Abre la terminal en VS Code: menu Terminal > Nueva terminal (o Ctrl + Ñ).
+  Debe abrirse en la carpeta Tutor-idiomas-bot. Si no, usa cd para entrar a ella.
+
+
+1) VERIFICAR QUE OLLAMA RESPONDE
+--------------------------------
+    ollama list
+
+Debe aparecer qwen2.5:7b.
+Si da error de conexion, abre la aplicacion Ollama desde el menu de inicio.
+
+
+2) ACTIVAR EL ENTORNO
+---------------------
+    .venv\Scripts\Activate.ps1
+
+Debe aparecer (.venv) al inicio de la linea.
+
+
+3) PROBAR LAS PREGUNTAS Y EL CALIFICADOR (sin Telegram)
+-------------------------------------------------------
+    python -m exam.test_a1
+
+- Imprime las 10 preguntas generadas con la correcta señalada con un check.
+- Luego califica los textos de ejemplo de escritura.
+- Puede tardar un par de minutos (genera y verifica las preguntas una por una).
+- Corre el comando 2 o 3 veces para ver varias tandas.
+- Revisa que no salgan caracteres raros (chino, etc.) ni preguntas muy dificiles.
+
+
+4) PROBAR EL BOT EN TELEGRAM
+----------------------------
+Si el bot anterior sigue corriendo en otra terminal, paralo con Ctrl + C.
+
+    python bot.py
+
+- Deja esa terminal abierta mientras pruebas.
+- En Telegram escribe /reiniciar y haz el examen.
+- Para apagar el bot: Ctrl + C.
+
+
+SI ALGO FALLA
+-------------
+- "No pude preparar el examen" / "No pude calificar tu texto":
+  Ollama esta apagado. Repite el paso 1.
+- ModuleNotFoundError: exam
+  Ejecuta los comandos desde la carpeta que contiene exam/ y verifica que
+  exista exam/__init__.py.
+- Error al activar el entorno (scripts deshabilitados), ejecuta una sola vez:
+    Set-ExecutionPolicy -Scope CurrentUser RemoteSigned

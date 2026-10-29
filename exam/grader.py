@@ -44,14 +44,14 @@ Reply ONLY with JSON in this exact shape:
   "feedback": "..."}}"""
 
 
-def _call_ollama(system: str, user: str) -> dict:
+def _call_ollama(system: str, user: str, temperature: float = 0.1) -> dict:
     response = httpx.post(
         f"{OLLAMA_URL}/api/chat",
         json={
             "model": OLLAMA_MODEL,
             "stream": False,
             "format": "json",
-            "options": {"temperature": 0.1},
+            "options": {"temperature": temperature},
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},

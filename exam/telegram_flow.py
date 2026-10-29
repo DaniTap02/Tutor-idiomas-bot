@@ -1,6 +1,7 @@
 """Flujo del examen de ubicación en Telegram.
 
 Estado del examen en context.user_data["examen"]; el resultado final en context.user_data["nivel"].
+Las preguntas de lectura las genera Ollama al iniciar cada nivel y se guardan en ex["questions"].
 Por ahora se evalúan lectura y escritura. La parte de habla se agrega cuando esté la transcripción.
 """
 import asyncio
@@ -11,6 +12,7 @@ from telegram.ext import ContextTypes
 from exam import questions_a1
 from exam.grader import grade
 from exam.placement import level_passed, next_step
+from exam.question_generator import generate_reading
 
 # Al crear los exámenes de A2, B1 y B2 solo hay que agregarlos aquí.
 BANCOS = {"A1": questions_a1}
@@ -38,25 +40,50 @@ async def iniciar_examen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def _preparar_preguntas(message, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Genera con Ollama las preguntas de lectura del nivel actual. Devuelve False si falló."""
+    ex = context.user_data["examen"]
+    espera = await message.reply_text("Preparando tu examen… ⏳ (puede tardar un poquito)")
+    try:
+        # generate_reading() es síncrona: se corre en un hilo para no congelar el bot
+        ex["questions"] = await asyncio.to_thread(
+            generate_reading, BANCOS[ex["level"]], ex["language"]
+        )
+    except Exception:
+        context.user_data.pop("examen", None)
+        await espera.edit_text(
+            "No pude preparar el examen. ¿Está encendido Ollama? Escribe /start para intentarlo de nuevo."
+        )
+        return False
+    await espera.delete()
+    return True
+
+
 async def elegir_idioma(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    if en_examen(context):  # doble clic mientras se generan las preguntas
+        return
     language = query.data.split(":")[1]
     context.user_data["examen"] = {
         "language": language,
         "level": "A1",
-        "part": "lectura",
+        "part": "generando",
         "q": 0,
         "answers": [],
         "scores": {},
+        "questions": [],
     }
     await query.edit_message_text(f"Perfecto: {IDIOMAS[language]}. Empezamos con el nivel A1. 💪")
+    if not await _preparar_preguntas(query.message, context):
+        return
+    context.user_data["examen"]["part"] = "lectura"
     await _enviar_pregunta(query.message, context)
 
 
 async def _enviar_pregunta(message, context: ContextTypes.DEFAULT_TYPE):
     ex = context.user_data["examen"]
-    preguntas = BANCOS[ex["level"]].READING[ex["language"]]
+    preguntas = ex["questions"]
     pregunta = preguntas[ex["q"]]
     teclado = InlineKeyboardMarkup(
         [[InlineKeyboardButton(op, callback_data=f"ans:{ex['q']}:{i}")] for i, op in enumerate(pregunta["options"])]
@@ -78,7 +105,7 @@ async def responder_lectura(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     banco = BANCOS[ex["level"]]
-    preguntas = banco.READING[ex["language"]]
+    preguntas = ex["questions"]
     ex["answers"].append(int(opcion))
     ex["q"] += 1
     await query.edit_message_reply_markup(reply_markup=None)
@@ -87,7 +114,7 @@ async def responder_lectura(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _enviar_pregunta(query.message, context)
         return
 
-    ex["scores"]["lectura"] = banco.score_reading(ex["language"], ex["answers"])
+    ex["scores"]["lectura"] = banco.score_reading(preguntas, ex["answers"])
     ex["part"] = "escritura"
     await query.message.reply_text(f"✍️ Escritura\n\n{banco.WRITING_PROMPT[ex['language']]}")
 
@@ -97,6 +124,10 @@ async def texto_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     ex = context.user_data.get("examen")
     if not ex:
         return False
+
+    if ex["part"] == "generando":
+        await update.message.reply_text("Estoy preparando tu examen, un momento ⏳")
+        return True
 
     if ex["part"] == "lectura":
         await update.message.reply_text("Responde con los botones de la pregunta 👆")
@@ -135,9 +166,8 @@ async def texto_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 def _revision_lectura(ex: dict) -> str:
     """Resumen de lo que eligió el usuario en cada pregunta de lectura (se muestra al final)."""
-    preguntas = BANCOS[ex["level"]].READING[ex["language"]]
     lineas = []
-    for i, (pregunta, elegida) in enumerate(zip(preguntas, ex["answers"]), start=1):
+    for i, (pregunta, elegida) in enumerate(zip(ex["questions"], ex["answers"]), start=1):
         correcta = pregunta["answer"]
         if elegida == correcta:
             lineas.append(f"{i}. {pregunta['q']} → ✅ {pregunta['options'][elegida]}")
@@ -165,8 +195,11 @@ async def _cerrar_nivel(message, context: ContextTypes.DEFAULT_TYPE):
 
     # Pasó y existe el examen del siguiente nivel: continúa
     if siguiente["action"] == "exam" and siguiente["level"] in BANCOS:
-        ex.update(level=siguiente["level"], part="lectura", q=0, answers=[], scores={})
+        ex.update(level=siguiente["level"], part="generando", q=0, answers=[], scores={}, questions=[])
         await message.reply_text(f"{resumen}\n\n✅ ¡Pasaste {nivel_rendido}! Sigue el examen {siguiente['level']}.")
+        if not await _preparar_preguntas(message, context):
+            return
+        context.user_data["examen"]["part"] = "lectura"
         await _enviar_pregunta(message, context)
         return
 
