@@ -12,10 +12,25 @@ N_VOCAB = 3      # vocabulario (frase corta)
 N_PASSAGE = 2    # comprensión con MINI-TEXTO (nota, cartel, mensaje, email corto)
 
 # Límites de largo (el generador usa los de A1 si el banco no los define)
-MAX_QUESTION_WORDS = 16
+MAX_QUESTION_WORDS = 22   # más largo que A1: las preguntas de gramática llevan una frase de contexto
+MAX_QUESTION_CHARS = 160
 MAX_OPTION_WORDS = 8
 PASSAGE_MIN_WORDS = 18
 PASSAGE_MAX_WORDS = 65
+
+# Temas cuya pregunta DEBE traer una frase de contexto antes de la frase con el espacio en blanco
+# (si no, varias opciones pueden ser válidas: taller/younger/shorter, will/can/must...).
+# Se comparan con el INICIO del texto del tema.
+CONTEXT_TOPICS = (
+    "Comparatives",
+    "Pronouns",
+    "Modals",
+    "Must / have to",
+    "Future:",
+    "Quantifiers",
+)
+# Temas con pronombres de género: el contexto debe mostrar el género (brother, sister, he, she...).
+GENDER_CUE_TOPICS = ("Pronouns",)
 
 # Cada tema lleva entre paréntesis el ALCANCE permitido: así el modelo no se pasa a B1.
 GRAMMAR_TARGETS = [
@@ -24,10 +39,10 @@ GRAMMAR_TARGETS = [
     "Future: going to for plans and intentions; basic will for predictions and quick decisions (I'll help you)",
     "Modals can/could for ability, permission and polite requests (Can I...?, Could you...?)",
     "Must / have to / don't have to for simple everyday rules and necessity",
-    "Comparatives and superlatives (taller than, more interesting than, the most expensive, the best)",
+    "Comparatives and superlatives (taller than, more interesting than, the most expensive, the best); the context sentence must give the facts (ages, heights, prices) so only ONE adjective fits",
     "There is / There are with some and any (There aren't any shops; Is there a bank?)",
     "Quantifiers: some/any, much/many, a lot of, a few/a little (countable vs uncountable)",
-    "Pronouns: personal, possessive (mine, yours) and object; possessive 's",
+    "Pronouns: personal, possessive (mine, yours, his, hers) and object; possessive 's; the context must show clearly WHO owns or does something, including gender",
     "Prepositions of time and place (in, on, at, under, between, next to) and movement (to, from, across)",
 ]
 

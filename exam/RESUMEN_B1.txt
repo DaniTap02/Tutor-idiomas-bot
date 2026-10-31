@@ -1,0 +1,87 @@
+=====================================================================
+RESUMEN: EXAMEN DE UBICACIÓN B1 (BOT DE TELEGRAM)
+=====================================================================
+Estado: examen B1 construido (lectura + escritura). Habla pendiente (prompt y
+checklist ya definidos). Falta B2. Pegar este resumen en otros chats.
+
+ARCHIVOS (carpeta exam/ del repo)
+NUEVOS
+- exam/questions_b1.py : config B1 (N_READING=10: 5 gramática, 2 vocabulario,
+  3 comprensión con mini-texto), temas con alcance, temas propios en español,
+  FORBIDDEN, FORBIDDEN_ES, FORBIDDEN_RE permisivo, PASSAGE_TARGETS,
+  PASSAGE_QUESTION_TYPES, WRITING_TASKS, SPEAKING_PROMPT, TASK_CHECKLIST, score_reading.
+- exam/test_b1.py : prueba por terminal (modos: filtros, lectura, escritura).
+REEMPLAZAN
+- exam/question_generator.py, exam/telegram_flow.py, exam/grader.py
+SIN CAMBIOS
+- bot.py, exam/placement.py, exam/questions_a1.py, exam/questions_a2.py,
+  exam/test_a1.py, exam/test_a2.py, exam/__init__.py
+
+ESTRUCTURA FINAL
+Tutor-idiomas-bot/
+  bot.py
+  exam/__init__.py  grader.py  placement.py  question_generator.py
+  exam/questions_a1.py  questions_a2.py  questions_b1.py
+  exam/telegram_flow.py  test_a1.py  test_a2.py  test_b1.py
+
+CAMBIOS
+question_generator.py (A1 y A2 producen EXACTAMENTE los mismos prompts y preguntas)
+- Atributos opcionales nuevos del banco (todos con getattr y valor por defecto = A1/A2):
+  MAX_QUESTION_CHARS (140), MAX_OPTION_CHARS (40), PASSAGE_MAX_OPTION_WORDS,
+  PASSAGE_MAX_OPTION_CHARS, GEN_STYLE, OPTION_LEN, GEN_EXAMPLES, PASSAGE_SHAPE,
+  PASSAGE_OPTION_LEN, PASSAGE_Q_WORDS, PASSAGE_PROMPT_MIN_WORDS/MAX_WORDS,
+  PASSAGE_QUESTION_TYPES, PASSAGE_ATTITUDE_RE, GRAMMAR_TARGETS_ES,
+  VOCAB_TARGETS_ES, FORBIDDEN_ES.
+- LEVEL_DESC incluye B1 ("intermediate students") y B2.
+- El CÓDIGO elige el tipo de pregunta de comprensión (main_idea / detail /
+  attitude), los reparte entre los mini-textos y deja "attitude" solo en
+  artículos, correos, cartas y textos de opinión (no en anuncios). La pregunta
+  guarda la clave "qtype".
+- Prompt armado en _build_system(); examen en español usa temas *_ES y FORBIDDEN_ES.
+grader.py
+- OLLAMA_NUM_CTX (por defecto 2048) y OLLAMA_TIMEOUT (por defecto 120).
+- MIN_WORDS["B1"]=50 (antes 20). PENALTY_PER_ERROR["B1"]=6 (antes 8).
+- MAX_ERRORS_COUNTED={"B1":5}: como máximo 5 errores descuentan puntos (A1, A2, B2 sin tope).
+telegram_flow.py
+- BANCOS = {"A1","A2","B1"}.
+- Tarea de escritura: si el banco tiene WRITING_TASKS, el código elige una al azar y
+  guarda solo su id en ex["writing_task"]; su checklist va a grade(). A1/A2 igual que antes.
+- Preguntas con opciones largas (>40 caracteres): las opciones se listan en el mensaje
+  (A, B, C) y los botones son A/B/C. Con opciones cortas todo igual que antes.
+- Mensajes largos (resultados + revisión) se parten en varios mensajes (límite 4096).
+- Aprobar A2 genera y lanza B1; aprobar B1 deja nivel B2 provisional.
+
+LECTURA B1
+- 10 preguntas: 5 gramática, 2 vocabulario, 3 mini-texto (55-120 palabras, se piden 60-110).
+- FORBIDDEN_RE: solo prohíbe estructuras de B2+: had been + -ing, is/was being,
+  will have + participio (NO "will have to"), would rather, if only, wish + pasado,
+  ought to, modales perfectos (should/must/might/could have), inversión (hardly had,
+  not only did), causativa (had my hair cut). Permite would, should, might, could,
+  must, been, going to, used to, "would have" y "Best wishes".
+  Falso positivo conocido: "could have a picnic" se rechaza (solo cuesta un reintento).
+  NO detecta por regex: condicionales mixtos, futuro continuo, pasiva perfecta (solo el prompt).
+- En español: temas propios (pretéritos, soler, ser/estar, por/para, subjuntivo condicional...)
+  porque -ed/-ing, do/make y for/since no existen en español.
+  Tercer condicional en español (Si hubiera estudiado, habría aprobado) es pesado
+  para un modelo de 7B: si genera preguntas malas, quítalo de GRAMMAR_TARGETS_ES.
+
+ESCRITURA B1 (80-100 palabras, mínimo 50 para calificar)
+- El código elige al azar UNA tarea: correo informal (4 requisitos), relato que
+  empieza con una frase dada (3), opinión sobre redes sociales (3).
+HABLA B1 (pendiente de implementar)
+- Contar una experiencia pasada memorable y dar opinión (45-60 s). 3 requisitos.
+
+PRUEBAS
+- Terminal: python -m exam.test_b1            (todo)
+            python -m exam.test_b1 filtros    (sin Ollama)
+            python -m exam.test_b1 lectura [es]
+            python -m exam.test_b1 escritura
+- Telegram: python bot.py y /reiniciar (aprobar A2 lanza B1 automáticamente).
+- Probado sin Ollama (LLM simulado): sintaxis; A1/A2 idénticos al código anterior;
+  filtro B1 (39 frases); generación B1 en inglés y español; reparto de tipos de pregunta;
+  tolerancia a fallos; tope de errores; MIN_WORDS; flujo completo A1->A2->B1->B2 provisional;
+  fallo en B1 -> enseñanza B1; las 3 tareas de escritura; botones A/B/C; mensajes largos.
+- NO probado: calidad real de las preguntas de qwen2.5:7b (o del modelo grande), tiempos de
+  generación en tu PC, calidad de la calificación de escritura con Ollama real, y el flujo
+  real en Telegram.
+=====================================================================

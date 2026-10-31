@@ -5,7 +5,11 @@ El LLM NO decide el nivel ni si "pasa": solo responde preguntas simples (¿está
 Así un modelo pequeño (7B) es suficiente, y los casos raros ("hola", otro idioma) los
 atrapa el código antes de depender del modelo.
 
-Para cambiar de modelo basta con cambiar OLLAMA_MODEL (variable de entorno).
+Variables de entorno (todas opcionales):
+  OLLAMA_MODEL    modelo a usar (por defecto qwen2.5:7b)
+  OLLAMA_NUM_CTX  tamaño de contexto (por defecto 2048; súbelo si usas textos largos y tu RAM lo aguanta)
+  OLLAMA_TIMEOUT  segundos de espera por llamada (por defecto 120)
+  OLLAMA_URL      dirección de Ollama
 """
 import json
 import os
@@ -14,14 +18,19 @@ import httpx
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")  # ajusta al tag que tengas: `ollama list`
+OLLAMA_NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX") or 2048)
+OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT") or 120)
 
 LANGUAGE_NAME = {"en": "English", "es": "Spanish"}
 LANGUAGE_NAME_ES = {"en": "inglés", "es": "español"}
 
 # Valores iniciales: calibrar probando con textos reales.
-PENALTY_PER_ERROR = {"A1": 10, "A2": 8, "B1": 8, "B2": 6}
-MIN_WORDS = {"A1": 5, "A2": 20, "B1": 20, "B2": 40}
+PENALTY_PER_ERROR = {"A1": 10, "A2": 8, "B1": 6, "B2": 6}
+MIN_WORDS = {"A1": 5, "A2": 20, "B1": 50, "B2": 40}
 MISSING_PENALTY = 25  # puntos que se restan por cada requisito de la tarea que falte
+# Tope de errores que descuentan puntos (textos largos: un modelo pequeño puede inventar errores).
+# Los niveles que no aparecen aquí no tienen tope (A1, A2 y B2 siguen como antes).
+MAX_ERRORS_COUNTED = {"B1": 5}
 
 SYSTEM_PROMPT = """You are a fair {language} examiner for CEFR level {level}.
 You receive a text written by a student{transcript_note}.
@@ -51,13 +60,13 @@ def _call_ollama(system: str, user: str, temperature: float = 0.1) -> dict:
             "model": OLLAMA_MODEL,
             "stream": False,
             "format": "json",
-            "options": {"temperature": temperature, "num_ctx": 2048},
+            "options": {"temperature": temperature, "num_ctx": OLLAMA_NUM_CTX},
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
         },
-        timeout=120,
+        timeout=OLLAMA_TIMEOUT,
     )
     response.raise_for_status()
     return json.loads(response.json()["message"]["content"])
@@ -145,7 +154,9 @@ def grade(
     missing = [c for c in checklist if not answers.get(c["id"], False)]
     errors = _verify_errors(result.get("errors", []) or [], language)
 
-    score = max(0, 100 - PENALTY_PER_ERROR[level] * len(errors) - MISSING_PENALTY * len(missing))
+    cap = MAX_ERRORS_COUNTED.get(level)
+    counted = len(errors) if cap is None else min(len(errors), cap)
+    score = max(0, 100 - PENALTY_PER_ERROR[level] * counted - MISSING_PENALTY * len(missing))
 
     if missing:
         feedback = "Te faltó incluir: " + ", ".join(c["label_es"] for c in missing) + "."
