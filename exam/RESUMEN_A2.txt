@@ -1,0 +1,56 @@
+=====================================================================
+RESUMEN: EXAMEN DE UBICACIÓN A2 (BOT DE TELEGRAM)
+=====================================================================
+Estado: examen A2 construido (lectura + escritura). Habla pendiente (prompts y
+checklist ya definidos). Falta B1 y B2. Pegar este resumen en otros chats.
+
+ARCHIVOS (carpeta exam/ del repo)
+NUEVOS
+- exam/questions_a2.py : config A2 (N_READING=10: 5 gramática, 3 vocabulario,
+  2 comprensión con mini-texto), temas con alcance, FORBIDDEN, FORBIDDEN_RE,
+  PASSAGE_TARGETS, WRITING_PROMPT, SPEAKING_PROMPT, TASK_CHECKLIST, score_reading.
+- exam/test_a2.py : prueba por terminal.
+REEMPLAZAN
+- exam/question_generator.py, exam/telegram_flow.py, exam/grader.py
+SIN CAMBIOS
+- bot.py, exam/placement.py, exam/questions_a1.py, exam/test_a1.py, exam/__init__.py
+
+CAMBIOS
+question_generator.py
+- Palabras prohibidas por nivel: atributo FORBIDDEN_RE del banco (A1 usa el
+  valor por defecto de siempre). A2 permite will, going to, could, must, have to
+  y "would like"; sigue prohibiendo would (suelto), should, might, been, being,
+  ought to, used to.
+- Mini-textos: kind="passage" con prompt propio; JSON {"text","q","correct","wrong"};
+  texto 18-65 palabras, un párrafo, sin espacios en blanco ni alfabeto no latino.
+  La verificación (temperatura 0) recibe texto + pregunta + opciones.
+- Límites por nivel: MAX_QUESTION_WORDS (A2=16), MAX_OPTION_WORDS (8).
+- Prompt con nivel configurable (LEVEL).
+- Cuotas por tipo (gramática/vocab/mini-texto); las que fallan se reponen del
+  mismo tipo con temas nuevos.
+- Aplicado lo de A1: MAX_ROUNDS=5, EXAM_WORKERS=1 por defecto, tolera faltar
+  hasta 2 preguntas (falla si logra menos de n-2).
+grader.py
+- num_ctx=2048 en las llamadas a Ollama.
+- MIN_WORDS["A2"]=20 (antes 10). PENALTY_PER_ERROR["A2"]=8 (antes 10).
+telegram_flow.py
+- BANCOS = {"A1": questions_a1, "A2": questions_a2}.
+- Muestra el mini-texto (📄) y la pregunta (❓) en el mismo mensaje.
+- Revisión final: en preguntas con mini-texto muestra las primeras 6 palabras.
+- Al aprobar un nivel se guarda el siguiente como nivel provisional ANTES de
+  generar las preguntas; si Ollama falla, no se pierde el avance y el mensaje
+  indica usar /reiniciar.
+
+ESCRITURA A2
+- Mensaje a un amigo (25-35 palabras) sobre el último fin de semana/vacaciones.
+- Requisitos: a dónde fue, qué hizo (pasado), qué comió/vio, algo que le gustó.
+HABLA A2 (pendiente de implementar)
+- Rutina diaria + qué va a hacer este fin de semana (going to). 3 requisitos.
+
+PRUEBAS
+- Terminal: python -m exam.test_a2
+- Telegram: python bot.py y /reiniciar (aprobar A1 lanza A2 automáticamente).
+- Probado sin Ollama (LLM simulado): sintaxis, filtros por nivel, cuotas, tolerancia
+  a fallos, MIN_WORDS, mensajes de Telegram. NO probado: calidad real de las
+  preguntas de qwen2.5:7b, tiempos de generación, flujo real en Telegram.
+=====================================================================

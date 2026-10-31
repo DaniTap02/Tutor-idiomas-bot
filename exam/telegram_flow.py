@@ -9,13 +9,13 @@ import asyncio
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from exam import questions_a1
+from exam import questions_a1, questions_a2
 from exam.grader import grade
 from exam.placement import level_passed, next_step
 from exam.question_generator import generate_reading
 
 # Al crear los exámenes de A2, B1 y B2 solo hay que agregarlos aquí.
-BANCOS = {"A1": questions_a1}
+BANCOS = {"A1": questions_a1, "A2": questions_a2}
 
 IDIOMAS = {"en": "Inglés 🇬🇧", "es": "Español 🇪🇸"}
 
@@ -40,8 +40,9 @@ async def iniciar_examen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def _preparar_preguntas(message, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Genera con Ollama las preguntas de lectura del nivel actual. Devuelve False si falló."""
+async def _preparar_preguntas(message, context: ContextTypes.DEFAULT_TYPE, error_extra: str | None = None) -> bool:
+    """Genera con Ollama las preguntas de lectura del nivel actual. Devuelve False si falló.
+    error_extra: mensaje de error propio (por ejemplo cuando ya se guardó un nivel provisional)."""
     ex = context.user_data["examen"]
     espera = await message.reply_text("Preparando tu examen… ⏳ (puede tardar un poquito)")
     try:
@@ -52,7 +53,8 @@ async def _preparar_preguntas(message, context: ContextTypes.DEFAULT_TYPE) -> bo
     except Exception:
         context.user_data.pop("examen", None)
         await espera.edit_text(
-            "No pude preparar el examen. ¿Está encendido Ollama? Escribe /start para intentarlo de nuevo."
+            error_extra
+            or "No pude preparar el examen. ¿Está encendido Ollama? Escribe /start para intentarlo de nuevo."
         )
         return False
     await espera.delete()
@@ -88,10 +90,12 @@ async def _enviar_pregunta(message, context: ContextTypes.DEFAULT_TYPE):
     teclado = InlineKeyboardMarkup(
         [[InlineKeyboardButton(op, callback_data=f"ans:{ex['q']}:{i}")] for i, op in enumerate(pregunta["options"])]
     )
-    await message.reply_text(
-        f"📖 {ex['level']} · Lectura {ex['q'] + 1}/{len(preguntas)}\n\n{pregunta['q']}",
-        reply_markup=teclado,
-    )
+    encabezado = f"📖 {ex['level']} · Lectura {ex['q'] + 1}/{len(preguntas)}"
+    if pregunta.get("text"):  # pregunta de comprensión con mini-texto
+        cuerpo = f"{encabezado}\n\n📄 {pregunta['text']}\n\n❓ {pregunta['q']}"
+    else:
+        cuerpo = f"{encabezado}\n\n{pregunta['q']}"
+    await message.reply_text(cuerpo, reply_markup=teclado)
 
 
 async def responder_lectura(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -169,11 +173,17 @@ def _revision_lectura(ex: dict) -> str:
     lineas = []
     for i, (pregunta, elegida) in enumerate(zip(ex["questions"], ex["answers"]), start=1):
         correcta = pregunta["answer"]
+        # En las preguntas con mini-texto solo se muestra el inicio del texto, para no alargar el mensaje
+        if pregunta.get("text"):
+            inicio = " ".join(pregunta["text"].split()[:6])
+            etiqueta = f"📄 «{inicio}…» {pregunta['q']}"
+        else:
+            etiqueta = pregunta["q"]
         if elegida == correcta:
-            lineas.append(f"{i}. {pregunta['q']} → ✅ {pregunta['options'][elegida]}")
+            lineas.append(f"{i}. {etiqueta} → ✅ {pregunta['options'][elegida]}")
         else:
             lineas.append(
-                f"{i}. {pregunta['q']} → ❌ {pregunta['options'][elegida]} "
+                f"{i}. {etiqueta} → ❌ {pregunta['options'][elegida]} "
                 f"(correcta: {pregunta['options'][correcta]})"
             )
     return "\n".join(lineas)
@@ -196,8 +206,22 @@ async def _cerrar_nivel(message, context: ContextTypes.DEFAULT_TYPE):
     # Pasó y existe el examen del siguiente nivel: continúa
     if siguiente["action"] == "exam" and siguiente["level"] in BANCOS:
         ex.update(level=siguiente["level"], part="generando", q=0, answers=[], scores={}, questions=[])
+        # Si falla la generación, el usuario no pierde lo ganado: queda en el nivel siguiente (provisional)
+        context.user_data["nivel"] = {
+            "language": ex["language"],
+            "level": siguiente["level"],
+            "provisional": True,
+        }
         await message.reply_text(f"{resumen}\n\n✅ ¡Pasaste {nivel_rendido}! Sigue el examen {siguiente['level']}.")
-        if not await _preparar_preguntas(message, context):
+        if not await _preparar_preguntas(
+            message,
+            context,
+            error_extra=(
+                f"No pude preparar el examen {siguiente['level']}. ¿Está encendido Ollama? "
+                f"Tu nivel queda como {siguiente['level']} (provisional). "
+                "Cuando Ollama esté listo, escribe /reiniciar para repetir el examen."
+            ),
+        ):
             return
         context.user_data["examen"]["part"] = "lectura"
         await _enviar_pregunta(message, context)
