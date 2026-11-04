@@ -19,7 +19,7 @@ Si da error de conexion, abre la aplicacion Ollama desde el menu de inicio.
 
 2) ACTIVAR EL ENTORNO
 ---------------------
-    .venv\Scripts\Activate.ps1
+    .\.venv\Scripts\Activate.ps1
 
 Debe aparecer (.venv) al inicio de la linea.
 

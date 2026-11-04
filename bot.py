@@ -22,6 +22,7 @@ from exam.telegram_flow import (
     responder_lectura,
     texto_de_examen,
     tiene_nivel,
+    voz_de_examen,
 )
 
 load_dotenv()
@@ -218,6 +219,19 @@ async def responder(
         )
 
 
+async def voz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    # Las notas de voz solo se usan por ahora en la parte de habla del examen
+    if await voz_de_examen(update, context):
+        return
+
+    await update.message.reply_text(
+        "Por ahora solo uso notas de voz durante el examen de nivel 🎤"
+    )
+
+
 async def puntos(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
@@ -261,6 +275,7 @@ def main():
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, responder)
     )
+    app.add_handler(MessageHandler(filters.VOICE, voz))
 
     print("Tutor de Español iniciado. Presiona Ctrl+C para detenerlo.")
     app.run_polling()

@@ -2,9 +2,11 @@
 
 Estado del examen en context.user_data["examen"]; el resultado final en context.user_data["nivel"].
 Las preguntas de lectura las genera Ollama al iniciar cada nivel y se guardan en ex["questions"].
-Por ahora se evalúan lectura y escritura. La parte de habla se agrega cuando esté la transcripción.
+Partes de cada nivel: lectura (botones) -> escritura (texto) -> habla (nota de voz, transcrita con Whisper).
 """
 import asyncio
+import os
+import tempfile
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
@@ -13,11 +15,14 @@ from exam import questions_a1, questions_a2
 from exam.grader import grade
 from exam.placement import level_passed, next_step
 from exam.question_generator import generate_reading
+from exam.stt import transcribe
 
-# Al crear los exámenes de A2, B1 y B2 solo hay que agregarlos aquí.
+# Al crear los exámenes de B1 y B2 solo hay que agregarlos aquí.
 BANCOS = {"A1": questions_a1, "A2": questions_a2}
 
 IDIOMAS = {"en": "Inglés 🇬🇧", "es": "Español 🇪🇸"}
+
+MIN_SEGUNDOS_VOZ = 8  # audios más cortos se piden de nuevo
 
 
 def en_examen(context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -137,6 +142,10 @@ async def texto_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("Responde con los botones de la pregunta 👆")
         return True
 
+    if ex["part"] == "habla":
+        await update.message.reply_text("Ahora envíame una nota de voz 🎤 (mantén presionado el micrófono)")
+        return True
+
     banco = BANCOS[ex["level"]]
     espera = await update.message.reply_text("Calificando tu texto… ⏳")
     try:
@@ -163,6 +172,78 @@ async def texto_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         correcciones = "\n".join(f"• {e['fragment']} → {e['correction']}" for e in r["errors"][:3])
         texto += f"\n\nPara mejorar:\n{correcciones}"
     await espera.edit_text(texto)
+
+    # Sigue la parte de habla (nota de voz)
+    ex["part"] = "habla"
+    await update.message.reply_text(f"🎤 Habla\n\n{banco.SPEAKING_PROMPT[ex['language']]}")
+    return True
+
+
+def _feedback_voz(feedback: str) -> str:
+    """El calificador habla de 'texto'/'escribe'; en la parte de habla se dice 'audio'/'habla'."""
+    return (
+        feedback.replace("Tu texto es muy corto. Escribe al menos", "Tu audio es muy corto. Habla al menos")
+        .replace("Tu texto debe estar escrito en", "Debes hablar en")
+    )
+
+
+async def voz_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Se llama cuando llega una nota de voz. Devuelve True si el mensaje era parte del examen."""
+    ex = context.user_data.get("examen")
+    if not ex:
+        return False
+
+    if ex["part"] != "habla":
+        await update.message.reply_text("Todavía no es momento de la nota de voz 🙂 Sigue con la parte actual.")
+        return True
+
+    voz = update.message.voice
+    if voz.duration < MIN_SEGUNDOS_VOZ:
+        await update.message.reply_text(
+            f"Tu audio es muy corto (mínimo {MIN_SEGUNDOS_VOZ} segundos). Grábalo de nuevo 🎤"
+        )
+        return True
+
+    banco = BANCOS[ex["level"]]
+    espera = await update.message.reply_text("Escuchando tu audio… 🎧")
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            ruta = os.path.join(tmp, "nota.ogg")
+            archivo = await voz.get_file()
+            await archivo.download_to_drive(ruta)
+            # transcribe() y grade() son síncronas: se corren en un hilo para no congelar el bot
+            texto, idioma = await asyncio.to_thread(transcribe, ruta)
+
+        if idioma != ex["language"]:
+            await espera.edit_text(
+                f"Parece que hablaste en otro idioma. Habla en {IDIOMAS[ex['language']]} y grábalo de nuevo 🎤"
+            )
+            return True
+
+        r = await asyncio.to_thread(
+            grade,
+            texto,
+            ex["level"],
+            ex["language"],
+            banco.TASK_CHECKLIST["speaking"],
+            True,  # is_transcript: ignora puntuación y mayúsculas
+        )
+    except Exception:
+        await espera.edit_text("No pude procesar tu audio. ¿Está encendido Ollama? Envíalo de nuevo.")
+        return True
+
+    if r["needs_rewrite"]:
+        await espera.edit_text(
+            f"Entendí: «{texto}»\n\n{_feedback_voz(r['feedback'])}\n\nGrábalo de nuevo 🎤"
+        )
+        return True
+
+    ex["scores"]["habla"] = r["score"]
+    respuesta = f"Esto fue lo que entendí:\n«{texto}»\n\n{r['feedback']}"
+    if r["errors"]:
+        correcciones = "\n".join(f"• {e['fragment']} → {e['correction']}" for e in r["errors"][:3])
+        respuesta += f"\n\nPara mejorar:\n{correcciones}"
+    await espera.edit_text(respuesta)
 
     await _cerrar_nivel(update.message, context)
     return True
@@ -199,7 +280,8 @@ async def _cerrar_nivel(message, context: ContextTypes.DEFAULT_TYPE):
     resumen = (
         f"📊 Resultado {nivel_rendido}\n"
         f"Lectura: {s['lectura']:.0f}\n"
-        f"Escritura: {s['escritura']:.0f}\n\n"
+        f"Escritura: {s['escritura']:.0f}\n"
+        f"Habla: {s['habla']:.0f}\n\n"
         f"📖 Revisión de lectura\n{_revision_lectura(ex)}"
     )
 
