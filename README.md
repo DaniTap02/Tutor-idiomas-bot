@@ -50,7 +50,7 @@ Al primer contacto, el usuario realiza un **examen inicial** (lectura, escritura
 |---|---|---|
 | 0 | Diseño y fundamentos | ✅ Completa |
 | 1 | Esqueleto del bot | ✅ Completa |
-| 2 | Examen de nivel funcional | 🔄 En curso: **A1 y A2 listos** (lectura, escritura y habla); faltan B1 y B2 |
+| 2 | Examen de nivel funcional | 🔄 En curso: **A1, A2, B1 y B2 listos** (lectura, escritura y habla)  |
 | 3 | Tutor y contenido adaptativo | ⏳ Pendiente |
 | 4 | Recordatorios, pulido y evaluación final | ⏳ Pendiente |
 
@@ -74,7 +74,7 @@ flowchart TD
 
 ### Contenido por nivel
 
-| Parte | A1 | A2 |
+| Parte | A1 | A2 | B1 | B2 |
 |---|---|---|
 | 📖 **Lectura** | 10 preguntas: 6 de gramática y 4 de vocabulario | 10 preguntas: 5 de gramática, 3 de vocabulario y 2 de **comprensión con mini-texto** (nota, cartel, mensaje o email corto) |
 | ✍️ **Escritura** | Presentarte en 3 o 4 frases: nombre, de dónde eres y algo que te gusta | Mensaje a un amigo de 25 a 35 palabras sobre tu último fin de semana o vacaciones |
@@ -283,7 +283,7 @@ Tutor-idiomas-bot/
 - [x] Examen de nivel A1 y A2 con lectura, escritura y habla
 - [x] Notas de voz con reconocimiento de voz (STT) en el examen
 - [x] `requirements.txt`
-- [ ] Exámenes de B1 y B2
+- [x] Exámenes de B1 y B2
 - [ ] Parte de escucha: el bot envía audio (TTS) y el usuario responde
 - [ ] Comparación fonética de la pronunciación
 - [ ] Niveles y currículo por idioma (inglés y español)
@@ -300,6 +300,7 @@ Tutor-idiomas-bot/
 
 - `main`: rama principal.
 - `laura`: rama de trabajo.
+- `jp-dev`: rama de trabajo.
 
 **Contribuir**
 
