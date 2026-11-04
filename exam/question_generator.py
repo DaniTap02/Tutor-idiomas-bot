@@ -8,9 +8,10 @@ correcta; el LLM solo redacta UNA pregunta por tema. Cada pregunta pasa por filt
      la marcada como correcta (descarta preguntas ambiguas).
 Lo que no pasa se descarta y se genera de nuevo con otro intento/tema.
 
-Configurable por nivel (atributos opcionales del módulo questions_aX; A1 es el valor por defecto):
-  LEVEL, FORBIDDEN_RE, MAX_QUESTION_WORDS, MAX_OPTION_WORDS,
-  N_PASSAGE, PASSAGE_TARGETS, PASSAGE_MIN_WORDS, PASSAGE_MAX_WORDS.
+Configurable por nivel (atributos opcionales del módulo questions_aX / questions_bX; A1 es el valor por defecto):
+  LEVEL, FORBIDDEN_RE, MAX_QUESTION_WORDS, MAX_OPTION_WORDS, MAX_QUESTION_CHARS, MAX_OPTION_CHARS,
+  N_PASSAGE, PASSAGE_TARGETS, PASSAGE_MIN_WORDS, PASSAGE_MAX_WORDS,
+  STYLE_HINT, OPTION_WORDS_HINT, PASSAGE_STYLE, PASSAGE_OPTION_WORDS_HINT, PASSAGE_QUESTION_WORDS_HINT.
 Las preguntas con MINI-TEXTO (nota, cartel, mensaje, email) llevan además la clave "text".
 
 Es SÍNCRONO (httpx): llámalo con asyncio.to_thread desde el bot.
@@ -31,6 +32,10 @@ WORKERS = int(os.getenv("EXAM_WORKERS", "1"))  # en paralelo ahogaba la RAM: 1 p
 DEFAULT_FORBIDDEN_RE = re.compile(r"\b(will|would|could|should|must|might|been|being|going to)\b", re.I)
 FORBIDDEN_EN = DEFAULT_FORBIDDEN_RE  # compatibilidad con la versión anterior
 
+# Estilo por defecto (A1 y A2). Los niveles superiores lo cambian con STYLE_HINT y PASSAGE_STYLE.
+DEFAULT_STYLE_HINT = "Use only very simple, common words and short sentences."
+DEFAULT_PASSAGE_STYLE = "2 to 4 short sentences with simple, common words."
+
 BLANK = re.compile(r"_{2,}")
 INLINE_OPTIONS = re.compile(r"(?:^|\s)[A-Da-d][\).]\s")   # "A) ...", "B. ..." dentro de la pregunta
 LETTER_OPTION = re.compile(r"^[A-Da-d][\).]?$")           # opción que es solo "A", "B)", ...
@@ -42,6 +47,7 @@ RIDDLE = re.compile(r"\b(what|who) am i\b|\bif i am not\b", re.I)   # adivinanza
 LEVEL_DESC = {
     "A1": "absolute beginners",
     "A2": "elementary students",
+    "B1": "intermediate students",
 }
 
 GEN_PROMPT = """You write multiple-choice questions for a CEFR {level} {language} placement exam ({level_desc}).
@@ -50,10 +56,10 @@ Write ONE question about this topic: {topic}
 Rules:
 - Everything (question and options) is written in {language}.
 - Write ONLY with the Latin alphabet. NEVER write Chinese, Japanese or characters of any other script.
-- Use only very simple, common words and short sentences.
+- {style}
 - The question has AT MOST ONE blank written as ___ (never two blanks).
 - Do NOT write the options inside the question. No "A)", "B)", "C)" anywhere. Options are separate.
-- Options are short (1 to 4 words), with NO letters or numbers in front of them.
+- Options are short (1 to {opt_words} words), with NO letters or numbers in front of them.
 - Exactly ONE correct answer and exactly 2 wrong answers. Wrong answers must be clearly wrong in
   the sentence (grammatically incorrect or factually false). NEVER use a different but valid answer.
 - The question must make sense by itself: no pictures, no "the girl", no riddles, no trick or
@@ -73,11 +79,11 @@ Write ONE short text and ONE question about it. Text type: {topic}
 Rules:
 - Everything is written in {language}.
 - Write ONLY with the Latin alphabet. NEVER write Chinese, Japanese or characters of any other script.
-- The text has {min_w} to {max_w} words: 2 to 4 short sentences with simple, common words.
+- The text has {min_w} to {max_w} words: {passage_style}
   It is ONE paragraph, with no line breaks and no blanks (___).
 - The question asks about ONE clear fact that is written in the text (who, what, when, where, why,
-  how much). It has no blank and is short (at most 12 words).
-- Options are short (1 to 6 words), with NO letters or numbers in front of them.
+  how much). It has no blank and is short (at most {q_words} words).
+- Options are short (1 to {opt_words} words), with NO letters or numbers in front of them.
 - Exactly ONE correct answer and exactly 2 wrong answers. The wrong answers must be clearly wrong
   according to the text. NEVER use a different but valid answer.
 - No pictures, no riddles, no trick questions.
@@ -124,9 +130,11 @@ def _forbidden_re(banco):
 def _format_ok(q: str, options: list[str], language: str, banco=None, text: str | None = None) -> bool:
     max_q = getattr(banco, "MAX_QUESTION_WORDS", 14)
     max_o = getattr(banco, "MAX_OPTION_WORDS", 8)
+    max_q_chars = getattr(banco, "MAX_QUESTION_CHARS", 140)
+    max_o_chars = getattr(banco, "MAX_OPTION_CHARS", 40)
     forbidden = _forbidden_re(banco)
 
-    if not q or len(q) > 140 or any(not o or len(o) > 40 for o in options):
+    if not q or len(q) > max_q_chars or any(not o or len(o) > max_o_chars for o in options):
         return False
     if len({o.lower() for o in options}) != 3:
         return False
@@ -177,11 +185,18 @@ def _make_question(kind: str, topic: str, banco, language: str) -> dict | None:
         system = PASSAGE_PROMPT.format(
             min_w=getattr(banco, "PASSAGE_MIN_WORDS", 18),
             max_w=getattr(banco, "PASSAGE_MAX_WORDS", 65) - 10,  # margen: el modelo suele pasarse
+            passage_style=getattr(banco, "PASSAGE_STYLE", DEFAULT_PASSAGE_STYLE),
+            q_words=getattr(banco, "PASSAGE_QUESTION_WORDS_HINT", 12),
+            opt_words=getattr(banco, "PASSAGE_OPTION_WORDS_HINT", 6),
             **common,
         )
         user_msg = "Write the text and the question now."
     else:
-        system = GEN_PROMPT.format(**common)
+        system = GEN_PROMPT.format(
+            style=getattr(banco, "STYLE_HINT", DEFAULT_STYLE_HINT),
+            opt_words=getattr(banco, "OPTION_WORDS_HINT", 4),
+            **common,
+        )
         user_msg = "Write the question now."
 
     for _ in range(ATTEMPTS_PER_TOPIC):

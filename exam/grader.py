@@ -20,8 +20,7 @@ LANGUAGE_NAME_ES = {"en": "inglés", "es": "español"}
 
 # Valores iniciales: calibrar probando con textos reales.
 PENALTY_PER_ERROR = {"A1": 10, "A2": 8, "B1": 8, "B2": 6}
-MIN_WORDS = {"A1": 5, "A2": 20, "B1": 20, "B2": 40}
-MISSING_PENALTY = 25  # puntos que se restan por cada requisito de la tarea que falte
+MIN_WORDS = {"A1": 5, "A2": 20, "B1": 40, "B2": 40}MISSING_PENALTY = 25  # puntos que se restan por cada requisito de la tarea que falte
 
 SYSTEM_PROMPT = """You are a fair {language} examiner for CEFR level {level}.
 You receive a text written by a student{transcript_note}.

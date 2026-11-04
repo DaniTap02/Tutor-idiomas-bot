@@ -11,14 +11,14 @@ import tempfile
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from exam import questions_a1, questions_a2
+from exam import questions_a1, questions_a2, questions_b1
 from exam.grader import grade
 from exam.placement import level_passed, next_step
 from exam.question_generator import generate_reading
 from exam.stt import transcribe
 
 # Al crear los exámenes de B1 y B2 solo hay que agregarlos aquí.
-BANCOS = {"A1": questions_a1, "A2": questions_a2}
+BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1}
 
 IDIOMAS = {"en": "Inglés 🇬🇧", "es": "Español 🇪🇸"}
 
