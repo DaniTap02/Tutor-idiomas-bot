@@ -48,6 +48,7 @@ LEVEL_DESC = {
     "A1": "absolute beginners",
     "A2": "elementary students",
     "B1": "intermediate students",
+    "B2": "upper-intermediate students",
 }
 
 GEN_PROMPT = """You write multiple-choice questions for a CEFR {level} {language} placement exam ({level_desc}).

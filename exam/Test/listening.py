@@ -74,6 +74,26 @@ CONFIG = {
             "a person giving an opinion about a film, a restaurant or a place and explaining why",
         ],
     },
+    "B2": {
+        "n": 3,
+        "min_words": 70,
+        "max_words": 130,
+        "q_words": 20,
+        "opt_words": 10,
+        "rate": "+0%",
+        "style": (
+            "Use natural, varied vocabulary and sentences of moderate to long length. The speaker can "
+            "explain something, give an opinion with reasons or tell a short account of events."
+        ),
+        "targets": [
+            "a radio news report about a social, environmental or local issue",
+            "a long voice message in which a person explains a problem and proposes a solution",
+            "a guide or organiser welcoming a group and explaining the schedule, the rules and the conditions",
+            "a person giving an opinion about technology, work or education and supporting it with reasons",
+            "a person describing an experience (a trip abroad, a job or a course) and what they learned from it",
+            "a recorded message from a company that explains a change in a service, with conditions and options",
+        ],
+    },
 }
 
 LISTEN_PROMPT = """You write listening comprehension questions for a CEFR {level} {language} placement exam ({level_desc}).

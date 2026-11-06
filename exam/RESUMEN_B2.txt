@@ -1,0 +1,112 @@
+=====================================================================
+RESUMEN: EXAMEN DE UBICACIÓN B2 (BOT DE TELEGRAM)
+=====================================================================
+Estado: examen B2 construido (lectura + escucha + escritura + habla). Es el
+último nivel: no hay C1 ni C2. Pegar este resumen en otros chats.
+
+ARCHIVOS (carpeta exam/ del repo)
+NUEVOS
+- exam/questions_b2.py : config B2 (N_READING=10: 4 gramática, 2 vocabulario y
+  colocaciones, 4 comprensión con texto), GRAMMAR_TARGETS (13 temas con
+  alcance), VOCAB_TARGETS (10), PASSAGE_TARGETS (7), STYLE_HINT, PASSAGE_STYLE,
+  FORBIDDEN, FORBIDDEN_RE, WRITING_PROMPT, SPEAKING_PROMPT, TASK_CHECKLIST,
+  score_reading.
+- exam/test_b2.py : prueba por terminal (mismo formato que test_a1.py).
+REEMPLAZAN
+- exam/listening.py : agrega CONFIG["B2"] (escucha).
+- exam/question_generator.py : LEVEL_DESC incluye "B2".
+- exam/grader.py : MIN_WORDS["B2"]=60 (antes 40).
+- exam/telegram_flow.py : BANCOS incluye "B2".
+- exam/test_escucha.py : acepta el nivel B2.
+SIN CAMBIOS
+- bot.py, exam/placement.py, exam/stt.py, exam/tts.py, exam/questions_a1.py,
+  exam/questions_a2.py, exam/questions_b1.py, exam/test_a1.py, exam/test_a2.py,
+  exam/test_b1.py, exam/__init__.py
+
+ESTRUCTURA FINAL
+Tutor-idiomas-bot/
+  bot.py  requirements.txt  README.md
+  exam/__init__.py  grader.py  placement.py  question_generator.py
+  exam/listening.py  stt.py  tts.py  telegram_flow.py
+  exam/questions_a1.py  questions_a2.py  questions_b1.py  questions_b2.py
+  exam/test_a1.py  test_a2.py  test_b1.py  test_b2.py  test_escucha.py
+
+CAMBIOS
+question_generator.py
+- B2 usa los atributos opcionales del banco (todos con getattr y valor por
+  defecto = A1/A2): STYLE_HINT, OPTION_WORDS_HINT, PASSAGE_STYLE,
+  PASSAGE_OPTION_WORDS_HINT, PASSAGE_QUESTION_WORDS_HINT, MAX_QUESTION_CHARS,
+  MAX_OPTION_CHARS. A1 y A2 siguen con los valores por defecto.
+- LEVEL_DESC de B2: "upper-intermediate students".
+grader.py
+- MIN_WORDS["B2"]=60. PENALTY_PER_ERROR["B2"]=6 (ya estaba así).
+telegram_flow.py
+- BANCOS = {"A1","A2","B1","B2"}.
+- Aprobar B1 genera y lanza B2 (antes dejaba el nivel B2 provisional).
+- Aprobar B2 termina el examen: el nivel queda B2 (sin marca de provisional)
+  y el bot dice que se completaron todos los niveles.
+- No aprobar B2 deja al usuario en enseñanza B2.
+NOTA DE COMPATIBILIDAD
+- B2 está hecho sobre las versiones de question_generator.py, telegram_flow.py
+  y grader.py de esta serie. Si tu repo tiene otra versión del B1 con atributos
+  distintos (por ejemplo GEN_STYLE, OPTION_LEN o WRITING_TASKS), esos
+  nombres no coinciden con STYLE_HINT y OPTION_WORDS_HINT de B2: hay que
+  unificarlos antes de usar B2.
+
+LECTURA B2
+- 10 preguntas: 4 gramática, 2 vocabulario/colocaciones, 4 comprensión con
+  texto (70-130 palabras; se piden 70-120).
+- Límites: pregunta de hasta 24 palabras y 200 caracteres; opción de hasta 12
+  palabras y 80 caracteres.
+- Gramática: condicional 3 y mixtos, past perfect, present perfect continuous,
+  pasiva en varios tiempos y con modales, estilo indirecto con verbos de
+  reporte, wish / if only, modales de deducción, relativas con whose/whom,
+  gerundio vs infinitivo con cambio de significado, futuro continuo y perfecto,
+  conectores de contraste y causativa (have / get something done).
+- Vocabulario: trabajo y negocios, educación e investigación, medio ambiente y
+  sociedad, medios y tecnología, salud, viajes y cultura, dinero y consumo,
+  ley y ciudadanía, opiniones y emociones, colocaciones y phrasal verbs comunes.
+- Textos de comprensión: artículo, carta o correo formal de queja o petición,
+  blog personal, texto de opinión, reseña detallada, anuncio con condiciones e
+  informe corto con cifras simples.
+- FORBIDDEN_RE (solo inglés): solo bloquea la inversión con adverbios
+  negativos (never/hardly/scarcely/rarely/seldom + auxiliar + pronombre; not
+  only did/do/does...). Permite todo lo de B1.
+- FORBIDDEN (prompt): inversión, subjuntivo, oraciones hendidas, modismos
+  avanzados, phrasal verbs raros y vocabulario literario o técnico.
+
+ESCUCHA B2 (3 audios, de 70 a 130 palabras)
+- Voz normal (+0%). Estilo: vocabulario natural y variado, frases medias o largas.
+- 6 tipos de texto: noticia de radio, mensaje largo con un problema y una
+  solución, guía que da la bienvenida a un grupo, opinión con razones,
+  experiencia (viaje, trabajo o curso) y mensaje grabado de una empresa.
+- Voces edge-tts (inglés: Jenny, Ryan, Guy; español: Salomé y Gonzalo de Colombia).
+- Cada audio se puede repetir 1 vez. Al final se muestra qué decía cada audio.
+
+ESCRITURA B2 (80-110 palabras, mínimo 60 para calificar)
+- Correo formal al gerente de una empresa, hotel o institución sobre un
+  problema con un servicio. 4 requisitos: qué salió mal, cómo le afectó,
+  qué ha hecho ya al respecto y una solución concreta con tono cortés.
+- Penalización: 6 puntos por error y 25 por cada requisito que falte.
+
+HABLA B2 (nota de voz de 60 a 90 s; mínimo 8 s para aceptarla)
+- Opinión sobre si la tecnología mejora o empeora nuestra vida. 3 requisitos:
+  opinión clara, al menos dos razones o ejemplos y una desventaja u otro
+  punto de vista.
+- Se transcribe con Whisper y se califica con el mismo calificador que la
+  escritura (mínimo 60 palabras transcritas). No mide la pronunciación fonética.
+
+PRUEBAS
+- Terminal: python -m exam.test_b2
+            python -m exam.test_escucha B2        (escucha en inglés)
+            python -m exam.test_escucha B2 es     (escucha en español)
+- Telegram: python bot.py y /reiniciar (aprobar B1 lanza B2 automáticamente).
+- Probado sin Ollama (LLM, audio y Telegram simulados): sintaxis; filtro de
+  inversión; generación de lectura B2 (10 preguntas, 4 con texto de 70 a 130
+  palabras) y de escucha (3 audios); flujo completo A1 -> A2 -> B1 -> B2 con
+  nivel final B2 sin marca de provisional; repetición de audio; respaldo cuando
+  falla el audio; examen sin escucha cuando no se genera.
+- NO probado: calidad real de las preguntas de qwen2.5:7b (B2 es el nivel más
+  exigente para un modelo de 7B), tiempos de generación en tu PC, edge-tts y
+  Whisper reales, calificación real con Ollama y el flujo real en Telegram.
+=====================================================================

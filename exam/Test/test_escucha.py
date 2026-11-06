@@ -8,11 +8,11 @@ import asyncio
 import os
 import sys
 
-from exam import questions_a1, questions_a2, questions_b1
+from exam import questions_a1, questions_a2, questions_b1, questions_b2
 from exam.listening import CONFIG, generate_listening
 from exam.tts import synthesize
 
-BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1}
+BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1, "B2": questions_b2}
 
 
 async def guardar_audios(preguntas: list[dict], nivel: str, idioma: str) -> None:

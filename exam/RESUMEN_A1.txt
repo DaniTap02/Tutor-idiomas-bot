@@ -1,0 +1,94 @@
+=====================================================================
+RESUMEN: EXAMEN DE UBICACIÓN A1 (BOT DE TELEGRAM)
+=====================================================================
+Estado: examen A1 construido (lectura + escucha + escritura + habla). Es el
+primer nivel: todos los usuarios empiezan aquí. Pegar este resumen en otros chats.
+
+ARCHIVOS (carpeta exam/ del repo)
+DEL NIVEL A1 (sin cambios en esta serie)
+- exam/questions_a1.py : config A1 (N_READING=10: 6 gramática, 4 vocabulario;
+  sin mini-textos), GRAMMAR_TARGETS (13 temas con alcance), VOCAB_TARGETS (11),
+  FORBIDDEN, WRITING_PROMPT, SPEAKING_PROMPT, TASK_CHECKLIST, score_reading.
+- exam/test_a1.py : prueba por terminal.
+NUEVOS (habla y escucha, sirven para A1, A2, B1 y B2)
+- exam/stt.py : transcribe la nota de voz con faster-whisper (local) y detecta
+  el idioma. Modelo con la variable WHISPER_MODEL (por defecto "small").
+- exam/tts.py : texto a voz con edge-tts (necesita internet; gTTS opcional como
+  respaldo). Genera .mp3 sin necesitar ffmpeg.
+- exam/listening.py : genera las preguntas de escucha; CONFIG por nivel
+  (aquí está la configuración de A1).
+- exam/test_escucha.py : prueba de la escucha (preguntas + audios en audio_prueba/).
+REEMPLAZAN
+- bot.py : manejador de notas de voz y botones "lis:" y "rep:".
+- exam/telegram_flow.py : partes escucha y habla, repetir audio, revisión final.
+- exam/placement.py : level_passed() acepta también el puntaje de escucha.
+- exam/question_generator.py : atributos opcionales del banco (A1 usa los
+  valores por defecto).
+- exam/grader.py : valores de B1 y B2 (A1 no cambia).
+SIN CAMBIOS
+- exam/__init__.py, exam/questions_a1.py, exam/test_a1.py
+
+ESTRUCTURA FINAL
+Tutor-idiomas-bot/
+  bot.py  requirements.txt  README.md
+  exam/__init__.py  grader.py  placement.py  question_generator.py
+  exam/listening.py  stt.py  tts.py  telegram_flow.py
+  exam/questions_a1.py  questions_a2.py  questions_b1.py  questions_b2.py
+  exam/test_a1.py  test_a2.py  test_b1.py  test_b2.py  test_escucha.py
+
+CAMBIOS QUE AFECTAN A A1
+telegram_flow.py
+- Orden de las partes: lectura -> escucha -> escritura -> habla.
+- Aprobar A1 genera y lanza el examen A2; no aprobarlo deja al usuario en
+  enseñanza A1.
+- Escucha: si no se pueden generar las preguntas, el examen sigue sin esa
+  parte (no se promedia). Si falla solo el audio, el bot envía el texto.
+- Habla: nota de voz de mínimo 8 segundos; si se habla en otro idioma se pide
+  repetir. Los mensajes del calificador se adaptan a audio.
+placement.py
+- Cada parte (lectura, escucha, escritura, habla) debe sacar al menos 60 y el
+  promedio al menos 70.
+question_generator.py
+- A1 produce los mismos prompts y límites de antes (opciones de 1 a 4 palabras,
+  pregunta de hasta 140 caracteres, opción de hasta 40).
+
+LECTURA A1
+- 10 preguntas: 6 gramática, 4 vocabulario. Sin mini-textos.
+- Gramática: verbo to be, presente simple, presente continuo, pasado simple
+  (solo was/were y unos pocos verbos), pronombres, artículos, plurales,
+  demostrativos, adjetivos y comparativos simples, can, preposiciones, there
+  is / there are y preguntas con wh-.
+- Vocabulario: presentaciones, números, datos personales, familia, días y
+  horas, la casa, comida, ropa y colores, compras, lugares de la ciudad y clima.
+- Límites por defecto: pregunta de hasta 14 palabras, opción de hasta 8.
+- FORBIDDEN_RE por defecto (solo inglés): will, would, could, should, must,
+  might, been, being, going to.
+
+ESCUCHA A1 (3 audios, de 15 a 40 palabras)
+- Voz más lenta (-15%). Estilo: palabras muy simples y frases cortas.
+- 4 tipos de texto: mensaje de voz de un amigo o familiar, aviso simple en una
+  tienda o estación, una persona que se presenta y un mensaje sobre el clima o
+  los planes del día.
+- Cada audio se puede repetir 1 vez. Al final se muestra qué decía cada audio.
+
+ESCRITURA A1 (3 o 4 frases; mínimo 5 palabras para calificar)
+- Presentarse: nombre, de dónde eres y algo que te gusta (3 requisitos).
+- Penalización: 10 puntos por error y 25 por cada requisito que falte.
+
+HABLA A1 (nota de voz de 15 a 30 s)
+- Decir el nombre, dónde vive y algo que le gusta (3 requisitos).
+- Se transcribe con Whisper y se califica con el mismo calificador que la
+  escritura. No mide la pronunciación fonética.
+
+PRUEBAS
+- Terminal: python -m exam.test_a1
+            python -m exam.test_escucha            (escucha A1 en inglés)
+            python -m exam.test_escucha A1 es      (escucha A1 en español)
+- Telegram: python bot.py y /reiniciar.
+- Probado sin Ollama (LLM, audio y Telegram simulados): sintaxis; flujo
+  completo A1 -> A2 -> B1 -> B2; repetición de audio con un solo reintento;
+  respaldo cuando falla el audio; examen sin escucha cuando no se genera.
+- NO probado: calidad real de las preguntas de qwen2.5:7b, tiempos de
+  generación en tu PC, edge-tts y Whisper reales, calificación real con
+  Ollama y el flujo real en Telegram.
+=====================================================================

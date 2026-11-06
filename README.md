@@ -50,7 +50,7 @@ Al primer contacto, el usuario realiza un **examen inicial** (lectura, escucha, 
 |---|---|---|
 | 0 | Diseño y fundamentos | ✅ Completa |
 | 1 | Esqueleto del bot | ✅ Completa |
-| 2 | Examen de nivel funcional | 🔄 En curso: **A1, A2 y B1 listos** (lectura, escucha, escritura y habla); falta B2 |
+| 2 | Examen de nivel funcional | 🔄 En curso: **A1, A2, B1 y B2 listos** (lectura, escucha, escritura y habla) |
 | 3 | Tutor y contenido adaptativo | ⏳ Pendiente |
 | 4 | Recordatorios, pulido y evaluación final | ⏳ Pendiente |
 
@@ -72,17 +72,20 @@ flowchart TD
     G -- Sí --> H["Examen B1<br/>lectura → escucha → escritura → habla"]
     H --> I{¿Pasó B1?}
     I -- No --> T3["Enseñanza desde B1"]
-    I -- Sí --> J["Nivel B2 (provisional)"]
+    I -- Sí --> J["Examen B2<br/>lectura → escucha → escritura → habla"]
+    J --> K{¿Pasó B2?}
+    K -- No --> T4["Enseñanza desde B2"]
+    K -- Sí --> L["🎉 Todos los niveles completados"]
 ```
 
 ### Contenido por nivel
 
-| Parte | A1 | A2 | B1 |
-|---|---|---|---|
-| 📖 **Lectura** | 10 preguntas: 6 de gramática y 4 de vocabulario | 10 preguntas: 5 de gramática, 3 de vocabulario y 2 de **comprensión con mini-texto** (nota, cartel, mensaje o email corto) | 10 preguntas: 4 de gramática, 3 de vocabulario y 3 de **comprensión** con textos más largos (email, noticia, anuncio, blog o reseña) |
-| 🎧 **Escucha** | 3 audios de 15 a 40 palabras con voz más lenta: mensajes, avisos o una presentación | 3 audios de 25 a 60 palabras: planes que cambian, avisos de estación, direcciones o un fin de semana | 3 audios de 45 a 90 palabras: un problema, una noticia, un relato con sentimientos o un consejo |
-| ✍️ **Escritura** | Presentarte en 3 o 4 frases: nombre, de dónde eres y algo que te gusta | Mensaje a un amigo de 25 a 35 palabras sobre tu último fin de semana o vacaciones | Correo a un amigo de 50 a 70 palabras sobre un problema reciente: qué pasó, cómo te sentiste, qué hiciste y qué aprendiste |
-| 🎤 **Habla** | Nota de voz de 15 a 30 s: nombre, dónde vives y algo que te gusta | Nota de voz de 30 a 45 s: tu rutina diaria y lo que vas a hacer este fin de semana | Nota de voz de 45 a 60 s: un viaje o experiencia que disfrutaste, por qué te gustó y qué harías la próxima vez |
+| Parte | A1 | A2 | B1 | B2 |
+|---|---|---|---|---|
+| 📖 **Lectura** | 10 preguntas: 6 de gramática y 4 de vocabulario | 10 preguntas: 5 de gramática, 3 de vocabulario y 2 de **comprensión con mini-texto** (nota, cartel, mensaje o email corto) | 10 preguntas: 4 de gramática, 3 de vocabulario y 3 de **comprensión** con textos más largos (email, noticia, anuncio, blog o reseña) | 10 preguntas: 4 de gramática, 2 de vocabulario y colocaciones, y 4 de **comprensión** con textos de 70 a 130 palabras (artículo, carta formal, blog, opinión, reseña o informe) |
+| 🎧 **Escucha** | 3 audios de 15 a 40 palabras con voz más lenta: mensajes, avisos o una presentación | 3 audios de 25 a 60 palabras: planes que cambian, avisos de estación, direcciones o un fin de semana | 3 audios de 45 a 90 palabras: un problema, una noticia, un relato con sentimientos o un consejo | 3 audios de 70 a 130 palabras: una noticia de radio, un mensaje largo con un problema y su solución, una charla de bienvenida o una opinión con razones |
+| ✍️ **Escritura** | Presentarte en 3 o 4 frases: nombre, de dónde eres y algo que te gusta | Mensaje a un amigo de 25 a 35 palabras sobre tu último fin de semana o vacaciones | Correo a un amigo de 50 a 70 palabras sobre un problema reciente: qué pasó, cómo te sentiste, qué hiciste y qué aprendiste | Correo formal de 80 a 110 palabras sobre un problema con un servicio: qué salió mal, cómo te afectó, qué has hecho ya y qué solución pides |
+| 🎤 **Habla** | Nota de voz de 15 a 30 s: nombre, dónde vives y algo que te gusta | Nota de voz de 30 a 45 s: tu rutina diaria y lo que vas a hacer este fin de semana | Nota de voz de 45 a 60 s: un viaje o experiencia que disfrutaste, por qué te gustó y qué harías la próxima vez | Nota de voz de 60 a 90 s: ¿la tecnología mejora o empeora nuestra vida? Opinión, razones o ejemplos y una desventaja u otro punto de vista |
 
 ### Cómo se evalúa
 
@@ -94,7 +97,7 @@ flowchart TD
 
 > ℹ️ La transcripción comprueba que el usuario se hizo entender, pero **no mide la pronunciación fonética**. La comparación fonética sigue en la hoja de ruta.
 
-Para agregar el examen de B2 hay que crear su archivo `questions_b2.py` (con el mismo formato que `questions_b1.py`), registrarlo en `BANCOS` dentro de `exam/telegram_flow.py` y agregar su configuración de escucha en `CONFIG` de `exam/listening.py`. El generador de preguntas adapta su estilo a cada nivel con atributos opcionales del banco, como `STYLE_HINT` y `PASSAGE_STYLE`.
+Para agregar un nivel nuevo hay que crear su archivo `questions_xx.py` (con el mismo formato que `questions_b2.py`), registrarlo en `BANCOS` dentro de `exam/telegram_flow.py` y agregar su configuración de escucha en `CONFIG` de `exam/listening.py`. Si pasas B2, el examen termina y el nivel queda como B2. El generador de preguntas adapta su estilo a cada nivel con atributos opcionales del banco, como `STYLE_HINT` y `PASSAGE_STYLE`.
 
 ### Práctica (español)
 
@@ -201,6 +204,7 @@ Luego abre tu bot en Telegram y escribe `/start`. El bot usa *long polling*, por
 python -m exam.test_a1
 python -m exam.test_a2
 python -m exam.test_b1
+python -m exam.test_b2
 python -m exam.test_escucha          # escucha A1 en inglés
 python -m exam.test_escucha B1 es    # escucha de otro nivel o idioma
 ```
@@ -223,9 +227,11 @@ Tutor-idiomas-bot/
 │   ├── questions_a1.py        # Temas, tareas y checklist del examen A1
 │   ├── questions_a2.py        # Temas, tareas y checklist del examen A2
 │   ├── questions_b1.py        # Temas, tareas y checklist del examen B1
+│   ├── questions_b2.py        # Temas, tareas y checklist del examen B2
 │   ├── test_a1.py             # Prueba por terminal (A1)
 │   ├── test_a2.py             # Prueba por terminal (A2)
 │   ├── test_b1.py             # Prueba por terminal (B1)
+│   ├── test_b2.py             # Prueba por terminal (B2)
 │   └── test_escucha.py        # Prueba de la escucha: preguntas y audios
 ├── requirements.txt           # Dependencias
 ├── comandos_terminal.txt      # Guía para probar el examen
@@ -292,9 +298,9 @@ Tutor-idiomas-bot/
 
 ## ⚠️ Limitaciones actuales
 
-- Solo existen los exámenes de **A1, A2 y B1**. Al pasar B1, el nivel queda como B2 **provisional**.
+- Existen los exámenes de **A1, A2, B1 y B2**. No hay examen de C1 ni de C2: pasar B2 es el máximo nivel evaluado.
 - Si Ollama falla al preparar el examen de un nivel superior, el usuario queda en ese nivel (provisional) y puede repetir con `/reiniciar`.
-- Con un modelo de 7B, las preguntas de B1 (condicionales, pasiva) son las más difíciles de generar y pueden tardar más.
+- Con un modelo de 7B, las preguntas de B1 y B2 (condicionales, pasiva, textos largos) son las más difíciles de generar y pueden tardar más.
 - La práctica tiene solo 5 ejercicios y únicamente en español.
 - El examen necesita **Ollama** encendido para generar preguntas y calificar.
 - Los datos se guardan en un archivo local (`datos_bot.pkl`); todavía no hay base de datos ni historial de progreso.
@@ -304,10 +310,9 @@ Tutor-idiomas-bot/
 
 ## 🛣️ Hoja de ruta
 
-- [x] Examen de nivel A1, A2 y B1 con lectura, escucha, escritura y habla
+- [x] Examen de nivel A1, A2, B1 y B2 con lectura, escucha, escritura y habla
 - [x] Notas de voz con reconocimiento de voz (STT) en el examen
 - [x] `requirements.txt`
-- [ ] Examen de B2
 - [x] Parte de escucha: el bot envía audio (TTS) y el usuario responde
 - [ ] Comparación fonética de la pronunciación
 - [ ] Niveles y currículo por idioma (inglés y español)
@@ -324,7 +329,6 @@ Tutor-idiomas-bot/
 
 - `main`: rama principal.
 - `laura`: rama de trabajo.
-- `jp-dev`: rama de trabajo.
 
 **Contribuir**
 

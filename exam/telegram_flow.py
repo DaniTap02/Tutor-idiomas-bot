@@ -14,7 +14,7 @@ import tempfile
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from exam import questions_a1, questions_a2, questions_b1
+from exam import questions_a1, questions_a2, questions_b1, questions_b2
 from exam.grader import grade
 from exam.listening import CONFIG as ESCUCHA_CONFIG
 from exam.listening import generate_listening
@@ -25,8 +25,8 @@ from exam.tts import synthesize
 
 logger = logging.getLogger(__name__)
 
-# Al crear el examen de B2 solo hay que agregarlo aquí.
-BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1}
+# Al crear el examen de un nivel nuevo solo hay que agregarlo aquí (y su escucha en exam/listening.py).
+BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1, "B2": questions_b2}
 
 IDIOMAS = {"en": "Inglés 🇬🇧", "es": "Español 🇪🇸"}
 
