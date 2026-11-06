@@ -50,7 +50,7 @@ Al primer contacto, el usuario realiza un **examen inicial** (lectura, escucha, 
 |---|---|---|
 | 0 | Diseño y fundamentos | ✅ Completa |
 | 1 | Esqueleto del bot | ✅ Completa |
-| 2 | Examen de nivel funcional | 🔄 En curso: **A1, A2, B1 y B2 listos** (lectura, escucha, escritura y habla) |
+| 2 | Examen de nivel funcional | 🧪 En pruebas: A1, A2, B1 y B2 construidos (lectura, escucha, escritura y habla) en inglés y español; falta validarlos con Ollama y Telegram reales|
 | 3 | Tutor y contenido adaptativo | ⏳ Pendiente |
 | 4 | Recordatorios, pulido y evaluación final | ⏳ Pendiente |
 
