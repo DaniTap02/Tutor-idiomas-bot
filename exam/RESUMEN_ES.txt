@@ -1,0 +1,78 @@
+EXAMEN EN ESPAÑOL (A1, A2, B1)
+==============================
+
+Mismo motor y mismo flujo que el de inglés: LECTURA (10 preguntas generadas por Ollama y validadas)
+-> ESCUCHA (3 audios con voces colombianas) -> ESCRITURA -> HABLA. Mismas reglas de aprobación
+(placement.py) y mismo orden A1 -> A2 -> B1. El estudiante elige "Español" al iniciar en Telegram.
+
+Los temas NO son traducción de los de inglés: salen del temario de español del proyecto. Cada banco
+(questions_a1.py, questions_a2.py, questions_b1.py) tiene una sección "Temas para el examen en
+ESPAÑOL" con atributos terminados en _ES. Si un atributo no tiene versión _ES, se usa el de inglés.
+
+
+QUÉ SE EVALÚA POR NIVEL
+-----------------------
+A1  Gramática: ser/estar, hay vs estar, tener, gustar, presente regular, género y número,
+    artículos, pronombres sujeto, reflexivos de rutina, demostrativos, posesivos, interrogativos.
+    Vocabulario: saludos, números y hora, días y meses, países y nacionalidades, profesiones,
+    familia y descripción, casa, ciudad, ropa y colores, comida, tiempo atmosférico.
+    Solo PRESENTE. El abecedario y la pronunciación no se evalúan con opción múltiple (quedan para
+    la escucha y el habla).
+
+A2  Gramática: pretérito indefinido, imperfecto y su contraste, ir a + infinitivo, futuro simple,
+    imperativo afirmativo (tú y usted), pronombres de objeto directo e indirecto (se lo),
+    comparativos, gustar/encantar/doler, estar + gerundio.
+    Vocabulario: biografías, viajes y hostelería, indicaciones en la calle, salud y cuerpo,
+    vivienda y tareas del hogar, compras. Se permiten las formas de cortesía: me gustaría,
+    quisiera, ¿podría...?
+
+B1  Gramática: presente de subjuntivo (deseos, emociones, duda), pretérito perfecto vs indefinido,
+    pluscuamperfecto, contraste de los cuatro pasados, condicional simple (yo que tú, deberías),
+    se impersonal y pasiva refleja, conectores (sin embargo, por lo tanto, además...).
+    Vocabulario: opiniones y debates, sentimientos, medios y tecnología, trabajo y estudios,
+    problemas de viaje, pares que se confunden (por/para, saber/conocer, pedir/preguntar).
+
+    CAMBIO respecto a la versión anterior de B1 en español: antes evaluaba "si tuviera..." y
+    "si hubiera estudiado..." y prohibía el subjuntivo presente y el imperativo. Según el temario,
+    el imperfecto de subjuntivo es B2, el subjuntivo presente es B1 y el imperativo es A2.
+
+
+CONTROLES PROPIOS DEL ESPAÑOL
+-----------------------------
+- FORBIDDEN_RE_ES (filtro por código, exam/espanol.py): anula la pregunta si trae formas de otro
+  nivel. A1: pasados, futuros, ir a + verbo, condicional, subjuntivo, imperativo. A2: perfecto,
+  pluscuamperfecto, subjuntivo, condicional (menos cortesía). B1: imperfecto de subjuntivo,
+  condicional y futuro compuestos. Son listas de formas, no terminaciones, para no anular
+  "cafetería" o "panadería"; lo que se escape lo controla el prompt y la verificación del modelo.
+- CONTEXT_TOPICS_ES: temas que deben traer frase de contexto (ser/estar, posesivos, pasados,
+  futuro, subjuntivo, conectores, por/para...). Sin contexto se anulan por "no_context".
+- Ejemplos del prompt EN ESPAÑOL (con ejemplos en inglés el modelo de 7B tiende a escribir en
+  inglés) y regla de español neutro: ustedes (no vosotros), tildes y signos ¿ ¡ bien escritos, y
+  opciones que no se diferencien solo por una tilde.
+- Escucha: estilo y tipos de texto propios del español (en A2 ya no nombra "going to").
+- Calificador: acepta español de cualquier país (ustedes/vosotros, carro/coche, voseo). Las tildes
+  que faltan nunca hacen fallar un requisito; en A1 y A2 no cuentan como error, desde B1 sí. En la
+  parte de habla nunca cuentan (las pone Whisper).
+- A2 habla: el requisito de planes acepta "ir a + infinitivo" o futuro (TASK_CHECKLIST_ES).
+
+
+CÓMO PROBARLO
+-------------
+    python -m exam.test_espanol          (sin Ollama: 110 comprobaciones)
+    python -m exam.test_es A1            (con Ollama: preguntas y calificador)
+    python -m exam.test_es B1 escucha    (también genera los textos de escucha)
+    python -m exam.test_escucha A2 es    (escucha con los audios .mp3)
+    python -m exam.void_report           (por qué se anularon preguntas; filtra por "language": "es")
+
+
+PENDIENTE: B2 EN ESPAÑOL
+------------------------
+Se hará junto con el banco B2 de inglés (questions_b2.py, en su propio formato). Alcance del temario:
+  Gramática: imperfecto de subjuntivo y correlación de tiempos (si tuviera dinero, compraría...),
+  concesivas (aunque llueva, por más que estudie), relativas con subjuntivo (busco un trabajo que
+  tenga...), discurso indirecto con cambio de tiempos (dijo que vendría), ser/estar con cambio de
+  significado (ser listo / estar listo).
+  Vocabulario: temas abstractos (política, medio ambiente, ciencia, arte, economía), modismos
+  (tomar el pelo, costar un ojo de la cara), matizar opiniones, redacción formal (reclamaciones,
+  cartas formales, ensayos).
+  Para B2 en español el FORBIDDEN_RE_ES puede quedar vacío o muy permisivo.
