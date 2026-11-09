@@ -33,6 +33,10 @@ Añadidos para B1 (todos opcionales; sin ellos el comportamiento es el de A1/A2)
   PASSAGE_PROMPT_MIN_WORDS, PASSAGE_PROMPT_MAX_WORDS   texto/medidas del prompt de mini-textos
   PASSAGE_QUESTION_TYPES, PASSAGE_ATTITUDE_RE     tipo de pregunta de comprensión elegido por CÓDIGO
   GRAMMAR_TARGETS_ES, VOCAB_TARGETS_ES, FORBIDDEN_ES   temas/prohibidos propios para examen en español
+Examen en ESPAÑOL (todos opcionales; si el banco no define la versión _ES se usa la de inglés):
+  PASSAGE_TARGETS_ES, CONTEXT_TOPICS_ES, GENDER_CUE_TOPICS_ES, FORBIDDEN_RE_ES (filtro por código),
+  GEN_STYLE_ES, GEN_EXAMPLES_ES, PASSAGE_EXAMPLE_ES. Los ejemplos y la regla de contexto tienen
+  versión en español por defecto (abajo), para que el modelo no copie el inglés de los ejemplos.
 Las preguntas con MINI-TEXTO (nota, cartel, mensaje, email) llevan además la clave "text"
 (y "qtype" si el banco define PASSAGE_QUESTION_TYPES).
 
@@ -133,7 +137,7 @@ Rules:
 {context_rule}- The question must make sense by itself: no pictures, no "the girl", no riddles, no trick or
   philosophical questions (for example NOT "What am I if I am not a teacher?").
 - If the topic is specific to English (e.g. a/an), use the closest equivalent in {language}.
-- NEVER use or test: {forbidden}.
+{lang_rule}- NEVER use or test: {forbidden}.
 
 Examples of the format:
 {examples}
@@ -147,6 +151,34 @@ CONTEXT_RULE = (
     "  may fit that context. Examples with context:\n"
     '  {"q": "My brother is 10 and my sister is 15. My brother is ___ than my sister.", "correct": "younger", "wrong": ["older", "more young"]}\n'
     '  {"q": "My brother Tom lost his book. It is not mine. It is ___.", "correct": "his", "wrong": ["he", "hers"]}\n'
+)
+
+# ---- Versiones en ESPAÑOL de los textos del prompt ----
+# Con ejemplos en inglés un modelo de 7B tiende a escribir la pregunta en inglés: por eso en el
+# examen de español los ejemplos también son en español.
+LANG_RULES = {
+    "en": "",
+    "es": (
+        "- Use neutral Latin American Spanish: 'ustedes' (never 'vosotros'), and words that are understood\n"
+        "  in every Spanish-speaking country. Write every accent (á, é, í, ó, ú, ñ) and the opening marks ¿ ¡.\n"
+        "- Never test spelling of accents alone: the options must differ in more than a written accent.\n"
+    ),
+}
+DEFAULT_GEN_EXAMPLES_ES = (
+    '{"q": "Mi hermana ___ médica.", "correct": "es", "wrong": ["son", "soy"]}\n'
+    '{"q": "¿Qué te pones en los pies?", "correct": "Zapatos", "wrong": ["Guantes", "Sombreros"]}'
+)
+CONTEXT_RULE_ES = (
+    "- IMPORTANT: this topic NEEDS CONTEXT. Write a context sentence FIRST (facts such as ages, heights,\n"
+    "  prices, names with gender, a time word, or the situation) and THEN the sentence with the blank.\n"
+    "  Only ONE option may fit that context. Examples with context:\n"
+    '  {"q": "Mi hermano tiene 10 años y mi hermana tiene 15. Mi hermano es ___ que mi hermana.", "correct": "menor", "wrong": ["mayor", "más mayor"]}\n'
+    '  {"q": "Ayer no trabajé. Por la tarde ___ al cine con mis amigos.", "correct": "fui", "wrong": ["voy", "iré"]}\n'
+)
+DEFAULT_PASSAGE_EXAMPLE_ES = (
+    '{"text": "¡Hola, Ana! Estoy en el supermercado. Necesitamos leche y huevos. Por favor, lleva tus '
+    'llaves, porque no estoy en casa hasta las seis.", "q": "¿Qué necesitan del supermercado?", '
+    '"correct": "Leche y huevos", "wrong": ["Pan y pescado", "Arroz y manzanas"]}'
 )
 
 DEFAULT_PASSAGE_EXAMPLE = (
@@ -168,7 +200,7 @@ Rules:
 - Exactly ONE correct answer and exactly 2 wrong answers. The wrong answers must be clearly wrong
   according to the text. NEVER use a different but valid answer.
 - No pictures, no riddles, no trick questions.
-- NEVER use or test: {forbidden}.
+{lang_rule}- NEVER use or test: {forbidden}.
 
 Example of the format:
 {example}
@@ -246,7 +278,18 @@ def _log_void(reason: str, topic: str, level: str, language: str, kind: str, q: 
         pass  # el registro nunca debe romper el examen
 
 
-def _forbidden_re(banco):
+def _lang_attr(banco, name: str, language: str, default=None):
+    """Atributo del banco para el idioma del examen: en español usa NAME_ES si el banco lo define."""
+    if language == "es" and hasattr(banco, name + "_ES"):
+        return getattr(banco, name + "_ES")
+    return getattr(banco, name, default)
+
+
+def _forbidden_re(banco, language: str = "en"):
+    """Filtro por código de palabras prohibidas. En español solo hay filtro si el banco define
+    FORBIDDEN_RE_ES (el de inglés no sirve: buscaría "will" o "been" en un texto en español)."""
+    if language == "es":
+        return getattr(banco, "FORBIDDEN_RE_ES", None)
     return getattr(banco, "FORBIDDEN_RE", DEFAULT_FORBIDDEN_RE)
 
 
@@ -255,8 +298,8 @@ def _filled(q: str, option: str) -> str:
     return BLANK.sub(option, q, count=1)
 
 
-def _topic_in(topic: str, banco, attr: str) -> bool:
-    return any(topic.startswith(p) for p in getattr(banco, attr, ()))
+def _topic_in(topic: str, banco, attr: str, language: str = "en") -> bool:
+    return any(topic.startswith(p) for p in (_lang_attr(banco, attr, language, ()) or ()))
 
 
 def _n_sentences(q: str) -> int:
@@ -273,7 +316,7 @@ def _format_problem(q: str, options: list[str], language: str, banco=None, text:
     if text is not None:   # en mini-textos las opciones pueden tener su propio límite (B1: actitud/intención)
         max_o = getattr(banco, "PASSAGE_MAX_OPTION_WORDS", max_o)
         max_o_chars = getattr(banco, "PASSAGE_MAX_OPTION_CHARS", max_o_chars)
-    forbidden = _forbidden_re(banco)
+    forbidden = _forbidden_re(banco, language)
 
     if not q or any(not o for o in options):
         return "format"
@@ -307,7 +350,7 @@ def _format_problem(q: str, options: list[str], language: str, banco=None, text:
         if RIDDLE.search(text) or PICTURE.search(text) or INLINE_OPTIONS.search(text):
             return "format"
 
-    if language == "en":
+    if forbidden is not None:
         joined = " ".join([q] + options + ([text] if text else []))
         if forbidden.search(joined):
             return "forbidden_word"
@@ -319,11 +362,11 @@ def _format_problem(q: str, options: list[str], language: str, banco=None, text:
                 if m.group(1).lower() not in ALLOWED_REPEATS:
                     return "redundant"
         # Temas que necesitan contexto: una frase de contexto antes de la frase con el espacio en blanco
-        if topic and _topic_in(topic, banco, "CONTEXT_TOPICS") and _n_sentences(q) < 2:
+        if topic and _topic_in(topic, banco, "CONTEXT_TOPICS", language) and _n_sentences(q) < 2:
             return "no_context"
 
     # Pronombres con género: el contexto debe mostrar a quién se refiere
-    if topic and _topic_in(topic, banco, "GENDER_CUE_TOPICS"):
+    if topic and _topic_in(topic, banco, "GENDER_CUE_TOPICS", language):
         if {o.lower() for o in options} & GENDERED_OPTIONS and not GENDER_CUES.search(q):
             return "no_gender_cue"
     return None
@@ -398,7 +441,9 @@ def _build_system(kind: str, topic: str, banco, language: str, qtype: str | None
         language=LANGUAGE_NAME[language],
         topic=topic,
         forbidden=_forbidden_text(banco, language),
+        lang_rule=LANG_RULES.get(language, ""),
     )
+    es = language == "es"
     if kind == "passage":
         min_w = getattr(banco, "PASSAGE_PROMPT_MIN_WORDS", getattr(banco, "PASSAGE_MIN_WORDS", 18))
         # margen: el modelo suele pasarse del máximo
@@ -408,16 +453,20 @@ def _build_system(kind: str, topic: str, banco, language: str, qtype: str | None
             max_w=max_w,
             shape=getattr(banco, "PASSAGE_SHAPE", DEFAULT_PASSAGE_SHAPE),
             question_rule=_question_rule(banco, qtype),
-            example=getattr(banco, "PASSAGE_EXAMPLE", DEFAULT_PASSAGE_EXAMPLE),
+            example=(getattr(banco, "PASSAGE_EXAMPLE_ES", DEFAULT_PASSAGE_EXAMPLE_ES) if es
+                     else getattr(banco, "PASSAGE_EXAMPLE", DEFAULT_PASSAGE_EXAMPLE)),
             option_len=getattr(banco, "PASSAGE_OPTION_LEN", DEFAULT_PASSAGE_OPTION_LEN),
             **common,
         )
         return system, "Write the text and the question now."
     system = GEN_PROMPT.format(
-        style=getattr(banco, "GEN_STYLE", DEFAULT_GEN_STYLE),
+        style=_lang_attr(banco, "GEN_STYLE", language, DEFAULT_GEN_STYLE),
         option_len=getattr(banco, "OPTION_LEN", DEFAULT_OPTION_LEN),
-        examples=getattr(banco, "GEN_EXAMPLES", DEFAULT_GEN_EXAMPLES),
-        context_rule=CONTEXT_RULE if _topic_in(topic, banco, "CONTEXT_TOPICS") else "",
+        # En español: GEN_EXAMPLES_ES del banco o los ejemplos en español por defecto (nunca los de inglés)
+        examples=(getattr(banco, "GEN_EXAMPLES_ES", DEFAULT_GEN_EXAMPLES_ES) if es
+                  else getattr(banco, "GEN_EXAMPLES", DEFAULT_GEN_EXAMPLES)),
+        context_rule=((CONTEXT_RULE_ES if es else CONTEXT_RULE)
+                      if _topic_in(topic, banco, "CONTEXT_TOPICS", language) else ""),
         **common,
     )
     return system, "Write the question now."
@@ -505,7 +554,7 @@ def generate_reading(banco, language: str) -> list[dict]:
     pools = {
         "grammar": getattr(banco, "GRAMMAR_TARGETS_ES", banco.GRAMMAR_TARGETS) if es else banco.GRAMMAR_TARGETS,
         "vocab": getattr(banco, "VOCAB_TARGETS_ES", banco.VOCAB_TARGETS) if es else banco.VOCAB_TARGETS,
-        "passage": getattr(banco, "PASSAGE_TARGETS", []),
+        "passage": _lang_attr(banco, "PASSAGE_TARGETS", language, []),
     }
     have = {k: 0 for k in need}
     type_count: dict[str, int] = {}   # tipos de comprensión ya aceptados

@@ -3,6 +3,8 @@ Las preguntas de lectura las genera Ollama (question_generator.py) a partir de e
 Escritura y habla las califica el agente (grader.py)."""
 import re
 
+from exam import espanol as es
+
 LEVEL = "A2"
 
 # ---------- Lectura: cuántas preguntas y de qué temas ----------
@@ -79,6 +81,70 @@ FORBIDDEN_RE = re.compile(
     r"\b(would(?! like)|should|might|been|being|ought to|used to)\b", re.I
 )
 
+# ---------- Temas para el examen en ESPAÑOL ----------
+# Tomados del temario A2 de español: contraste indefinido/imperfecto, ir a + infinitivo y futuro simple,
+# imperativo afirmativo, pronombres de objeto directo e indirecto y comparativos.
+GRAMMAR_TARGETS_ES = [
+    "Pretérito indefinido de verbos regulares e irregulares comunes (hablé, comí, viví, fui, tuve, hice) con ayer, el año pasado, la semana pasada",
+    "Pretérito imperfecto para descripciones y hábitos del pasado (era, tenía, jugaba, vivía) con antes, de niño, siempre, todos los días",
+    "Contraste entre pretérito indefinido y pretérito imperfecto en una frase (Cuando era niño, vivía en Cali; Ayer fui al cine)",
+    "Futuro con ir a + infinitivo para planes e intenciones (Voy a viajar el sábado)",
+    "Futuro simple de verbos regulares e irregulares comunes (viajaré, hablaré, tendré, haré, podré) para predicciones y promesas",
+    "Imperativo afirmativo de tú y de usted para instrucciones y direcciones (gira a la derecha, siga recto, come más fruta, tome esta calle)",
+    "Pronombres de objeto directo e indirecto y su combinación (lo, la, los, las, le, les, me lo, te la, se lo)",
+    "Comparativos (más... que, menos... que, tan... como, tanto como, mejor, peor, mayor, menor)",
+    "Verbos como gustar, encantar y doler (me duele la cabeza, le encantan los perros, nos gusta bailar)",
+    "Estar + gerundio para acciones en curso (estoy comiendo, están trabajando) frente al presente habitual",
+]
+
+VOCAB_TARGETS_ES = [
+    "Biografías y experiencias: nacer, crecer, estudiar, mudarse, casarse, conseguir un trabajo",
+    "Viajes y hostelería: reservar una habitación, el hotel, el restaurante, pedir la carta y la cuenta",
+    "Pedir y dar indicaciones en la calle (a la derecha, todo recto, la esquina, cerca de, enfrente de)",
+    "Salud y cuerpo humano: partes del cuerpo, síntomas (fiebre, tos, dolor de cabeza), el médico y la farmacia",
+    "Vivienda y vecindario: describir una casa, los muebles y las tareas del hogar (barrer, lavar los platos, hacer la cama)",
+    "Compras: tiendas, precios, tallas, el mercado",
+]
+
+# Tipos de mini-texto propios del examen en español (situaciones del temario A2)
+PASSAGE_TARGETS_ES = [
+    "a short note from a family member or friend (a reminder, a plan or simple instructions about house chores)",
+    "a public sign or notice (shop opening hours, a rule, a bus terminal announcement)",
+    "a short text message between two friends (being late, changing a plan, where to meet)",
+    "a short simple email about a past holiday or a visit to the doctor",
+    "a short hotel or restaurant advertisement or confirmation (prices, hours, a booking)",
+    "a very short biography of a person (where they were born, what they studied, where they live now)",
+]
+
+# Sin contexto varias opciones son válidas:
+#   "Mi hermano es ___ que mi hermana." -> mayor / menor / más alto
+#   "___ al cine."                         -> fui / iba / voy a ir
+#   "Se ___ di."                           -> lo / la
+CONTEXT_TOPICS_ES = (
+    "Pretérito indefinido",
+    "Pretérito imperfecto",
+    "Contraste entre pretérito",
+    "Futuro",
+    "Pronombres de objeto",
+    "Comparativos",
+    "Estar + gerundio",
+)
+GENDER_CUE_TOPICS_ES = ("Pronombres de objeto",)
+
+FORBIDDEN_ES = (
+    "present perfect (he comido) and pluperfect (había comido), subjunctive in subordinate clauses "
+    "(quiero que vengas, ojalá, espero que), negative commands (no comas), conditional except the polite "
+    "forms me gustaría, quisiera and ¿podría...?, impersonal or passive se, reported speech, idioms, "
+    "regional slang, rare or abstract vocabulary"
+)
+
+# Filtro por código (español). En A2 SÍ se permiten indefinido, imperfecto, ir a, futuro simple,
+# imperativo afirmativo y las formas de cortesía (me gustaría, quisiera, ¿podría...?).
+FORBIDDEN_RE_ES = es.compilar(
+    es.PERFECTO, es.PLUSCUAMPERFECTO, es.CONDICIONAL_SIMPLE, es.CONDICIONAL_COMPUESTO,
+    es.SUBJ_PRESENTE, es.SUBJ_IMPERFECTO,
+)
+
 # ---------- Escritura / habla ----------
 WRITING_PROMPT = {
     "en": (
@@ -117,6 +183,16 @@ TASK_CHECKLIST = {
     ],
 }
 
+
+# En español el requisito de planes no puede pedir "going to": se acepta ir a + infinitivo o futuro.
+TASK_CHECKLIST_ES = {
+    "writing": TASK_CHECKLIST["writing"],
+    "speaking": [
+        TASK_CHECKLIST["speaking"][0],
+        {"id": "req2", "check": "the student says what they are going to do this weekend, using ir a + infinitive, the simple future or another clear future plan", "label_es": "tus planes del fin de semana"},
+        TASK_CHECKLIST["speaking"][2],
+    ],
+}
 
 def score_reading(questions: list[dict], answers: list[int]) -> float:
     """questions: las preguntas generadas para este examen. answers: índice elegido por pregunta. 0-100."""

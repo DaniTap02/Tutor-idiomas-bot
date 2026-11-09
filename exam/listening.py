@@ -37,6 +37,7 @@ from exam.grader import LANGUAGE_NAME, _call_ollama
 from exam.question_generator import (
     ATTEMPTS_PER_TOPIC,
     EXIGIR_EVIDENCIA,
+    LANG_RULES,
     LEVEL_DESC,
     MAX_ROUNDS,
     _evidencia_ok,
@@ -91,6 +92,8 @@ def _audio_problem(text: str, q: str, options: list[str]) -> str | None:
 # ---------------------------------------------------------------- Configuración por nivel
 
 # rate: velocidad de la voz (edge-tts). En A1 va más lenta.
+# "style_es" y "targets_es" (opcionales) reemplazan a "style" y "targets" en el examen de español:
+# el estilo de inglés nombra gramática inglesa ("going to") que no aplica al español.
 CONFIG = {
     "A1": {
         "n": 3,
@@ -100,6 +103,10 @@ CONFIG = {
         "opt_words": 4,
         "rate": "-15%",
         "style": "Use only very simple, common words and short sentences (present simple, basic vocabulary).",
+        "style_es": (
+            "Use only very simple, common words and short sentences in the PRESENT tense "
+            "(ser, estar, tener, hay, gustar, regular verbs). No past, no future, no commands."
+        ),
         "targets": [
             "a short voice message from a friend or a family member (where they are and what they need)",
             "a simple announcement in a shop, a school or a bus station (a time, a place or a price)",
@@ -115,6 +122,19 @@ CONFIG = {
         "opt_words": 6,
         "rate": "-5%",
         "style": "Use simple, common words and short sentences. Past simple and going to are allowed.",
+        "style_es": (
+            "Use simple, common words and short sentences. Pretérito indefinido, imperfecto, "
+            "ir a + infinitivo, futuro simple and simple commands (gira, siga) are allowed. "
+            "No subjunctive, no present perfect (he comido)."
+        ),
+        "targets_es": [
+            "a phone message that changes a plan (a new time or a new place for a meeting)",
+            "an announcement at an airport or a bus terminal (a delay, a gate or a platform)",
+            "a person telling a friend what they did last weekend or on holiday",
+            "a person giving simple directions to get somewhere in a town (gira, sigue recto)",
+            "a phone message to a hotel, a restaurant or a doctor to book something",
+            "a person telling a friend about a health problem (what hurts and what the doctor said)",
+        ],
         "targets": [
             "a phone message that changes a plan (a new time or a new place for a meeting)",
             "an announcement at an airport or a train station (a delay, a gate or a platform)",
@@ -132,6 +152,12 @@ CONFIG = {
         "opt_words": 10,
         "rate": "+0%",
         "style": "Use clear, common everyday vocabulary and natural sentences of moderate length.",
+        "style_es": (
+            "Use clear, common everyday vocabulary and natural sentences of moderate length. Present "
+            "subjunctive for wishes and doubts (espero que, ojalá, no creo que), all past tenses, "
+            "conditional simple for advice (yo que tú, deberías) and se impersonal are allowed. "
+            "No imperfect subjunctive (si tuviera)."
+        ),
         "targets": [
             "a voice message about a problem (what happened, why and what the speaker will do next)",
             "a short radio news item about a local event or a simple news story",
@@ -187,12 +213,26 @@ Rules:
 - Never put two similar numbers or two similar names in the text where the student has to tell them
   apart only by one sound.
 - No pictures, no riddles, no trick questions.
-- NEVER use or test: {forbidden}.
+{lang_rule}- NEVER use or test: {forbidden}.
 
 Example of the format:
-{{"text": "Hi Ana, it is Tom. I am at the bus station, but the bus is late. Please wait for me at the cinema. The film starts at seven thirty.", "q": "Where does Tom want Ana to wait?", "correct": "At the cinema", "wrong": ["At the bus station", "At home"]}}
+{example}
 
 Reply ONLY with JSON: {{"text": "...", "q": "...", "correct": "...", "wrong": ["...", "..."]}}"""
+
+LISTEN_EXAMPLE = {
+    "en": (
+        '{"text": "Hi Ana, it is Tom. I am at the bus station, but the bus is late. Please wait for me at '
+        'the cinema. The film starts at seven thirty.", "q": "Where does Tom want Ana to wait?", '
+        '"correct": "At the cinema", "wrong": ["At the bus station", "At home"]}'
+    ),
+    "es": (
+        '{"text": "Hola, Ana, soy Tomás. Estoy en la estación de autobuses, pero el autobús tiene retraso. '
+        'Por favor, espérame en el cine. La película empieza a las siete y media.", '
+        '"q": "¿Dónde quiere Tomás que lo espere Ana?", "correct": "En el cine", '
+        '"wrong": ["En la estación", "En su casa"]}'
+    ),
+}
 
 LISTEN_VALIDATE_PROMPT = """You are a strict {language} teacher checking a LISTENING question for a CEFR {level} exam.
 The student only HEARS the spoken text, once or twice; they never read it. Text type: {topic}
@@ -215,8 +255,11 @@ Reply ONLY with JSON:
   "level_ok": true or false, "speakable": true or false, "evidence": "..."}}"""
 
 
-def _config(banco) -> dict:
+def _config(banco, language: str = "en") -> dict:
     cfg = dict(CONFIG.get(getattr(banco, "LEVEL", "A1"), CONFIG["A1"]))
+    if language == "es":
+        cfg["style"] = cfg.get("style_es", cfg["style"])
+        cfg["targets"] = cfg.get("targets_es", cfg["targets"])
     forzado = os.getenv("EXAM_LISTENING_N")
     if forzado and forzado.isdigit() and int(forzado) > 0:
         cfg["n"] = int(forzado)
@@ -244,7 +287,8 @@ def _reglas(banco, cfg: dict) -> SimpleNamespace:
         PASSAGE_MAX_OPTION_CHARS=max_o_chars,
         PASSAGE_MIN_WORDS=cfg["min_words"],
         PASSAGE_MAX_WORDS=cfg["max_words"],
-        FORBIDDEN_RE=_forbidden_re(banco),
+        FORBIDDEN_RE=_forbidden_re(banco, "en"),
+        FORBIDDEN_RE_ES=_forbidden_re(banco, "es"),
     )
 
 
@@ -288,7 +332,7 @@ def _validate(text: str, q: str, options: list[str], answer: int, language: str,
 
 
 def _make_listening(topic: str, banco, language: str) -> dict | None:
-    cfg = _config(banco)
+    cfg = _config(banco, language)
     level = getattr(banco, "LEVEL", "A1")
     reglas = _reglas(banco, cfg)
     system = LISTEN_PROMPT.format(
@@ -302,6 +346,8 @@ def _make_listening(topic: str, banco, language: str) -> dict | None:
         q_words=cfg["q_words"],
         opt_words=cfg["opt_words"],
         forbidden=_forbidden_text(banco, language),
+        lang_rule=LANG_RULES.get(language, ""),
+        example=LISTEN_EXAMPLE.get(language, LISTEN_EXAMPLE["en"]),
     )
 
     hint = ""
@@ -358,7 +404,7 @@ def generate_listening(banco, language: str) -> list[dict]:
     """Devuelve hasta N audios: [{"text", "q", "options", "answer", "topic"}, ...].
     "text" es lo que se convierte en audio. Si falta 1, sigue con los que hay;
     lanza RuntimeError si logra menos."""
-    cfg = _config(banco)
+    cfg = _config(banco, language)
     n = cfg["n"]
     questions: list[dict] = []
     seen: set[str] = set()

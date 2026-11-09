@@ -26,6 +26,32 @@ MIN_WORDS = {"A1": 5, "A2": 20, "B1": 50, "B2": 40}
 MIN_WORDS_SPEAKING = {"A1": 8, "A2": 20, "B1": 40, "B2": 40}
 MISSING_PENALTY = 25  # puntos que se restan por cada requisito de la tarea que falte
 
+# Reglas del calificador propias de cada idioma (se insertan en SYSTEM_PROMPT).
+# Español: el bot es para Colombia, pero se acepta cualquier variante (ustedes/vosotros, carro/coche).
+# Las tildes que faltan: en A1 y A2 no cuentan como error (casi nadie las escribe en el celular);
+# desde B1 sí se listan como error de ortografía. Nunca hacen falso un requisito.
+TILDES_CUENTAN = {"A1": False, "A2": False, "B1": True, "B2": True}
+LANG_NOTE = {
+    "es": (
+        "- Spanish from ANY country is correct: Latin American or Spain forms (ustedes or vosotros,\n"
+        "  carro or coche, celular or móvil, voseo) are never errors.\n"
+        "- A missing written accent (tilde: esta/está, cafe/café, como/cómo) or a missing opening mark\n"
+        "  (¿ ¡) never makes a requirement false. {tildes}\n"
+    ),
+}
+_TILDES = {
+    True: "You may list it in errors as spelling.",
+    False: "Do NOT list it in errors at this level.",
+}
+
+
+def _lang_note(language: str, level: str, is_transcript: bool) -> str:
+    nota = LANG_NOTE.get(language, "")
+    if not nota:
+        return ""
+    # En una transcripción las tildes las pone Whisper: nunca son del estudiante.
+    return nota.format(tildes=_TILDES[TILDES_CUENTAN.get(level, True) and not is_transcript])
+
 SYSTEM_PROMPT = """You are a fair {language} examiner for CEFR level {level}.
 You receive a text written by a student{transcript_note}.
 Your job is ONLY to check the text and detect errors. Do not give a level.
@@ -40,7 +66,7 @@ How to judge, before anything else:
 - When something is only PARTLY there, mark the requirement false and say in `why` exactly what is
   missing, so the student knows what to add. Do not mark it false without saying why.
 - Never penalise the student for something the exam did not ask for.
-
+{lang_note}
 1. is_in_language: true only if the text is written in {language}.
    Text in any other language (for example Spanish when the exam is in English) must be false.
    A few words borrowed from another language (a city, a name, a dish) do NOT make it false.
@@ -173,6 +199,7 @@ def grade(
         requirements="\n".join(f"   {c['id']}: {c['check']}" for c in checklist),
         shape=", ".join(f'"{c["id"]}": {{"ok": true or false, "why": "..."}}' for c in checklist),
         feedback_language=feedback_language,
+        lang_note=_lang_note(language, level, is_transcript),
         transcript_note=(
             " (it is an automatic transcription of speech: ignore punctuation and capitalization)"
             if is_transcript

@@ -1,6 +1,7 @@
 """Configuración del examen A1. Las preguntas de lectura YA NO están escritas aquí:
 las genera Ollama (ver question_generator.py) a partir de los temas permitidos en A1.
 Escritura y habla las califica el agente (grader.py)."""
+from exam import espanol as es
 
 # ---------- Lectura: cuántas preguntas y de qué temas ----------
 N_READING = 10
@@ -64,6 +65,63 @@ FORBIDDEN = (
     "present perfect, future tenses (will, going to), conditionals, passive voice, "
     "reported speech, relative clauses, phrasal verbs, idioms, modal verbs other than 'can', "
     "gerunds/infinitives after verbs except like/love/want, rare or abstract vocabulary"
+)
+
+# ---------- Temas para el examen en ESPAÑOL ----------
+# Tomados del temario A1 de español (no son traducción de los de inglés): ser/estar, hay, tener,
+# gustar, género y número... El abecedario y la pronunciación no se evalúan aquí con opción múltiple
+# escrita: quedan para la escucha y el habla.
+GRAMMAR_TARGETS_ES = [
+    "Ser y estar en presente (soy, eres, es; estoy, estás, está) para origen, profesión, ubicación y estado; afirmativo, negativo y preguntas",
+    "Hay frente a estar: hay + un/una/número (Hay un banco cerca) y el/la + está (El banco está en la plaza)",
+    "Tener en presente (tengo, tienes, tiene, tenemos, tienen) para edad, familia y cosas que se poseen",
+    "Gustar en presente: me gusta / me gustan, te gusta, le gusta, nos gusta, con sustantivos en singular o plural y con infinitivos",
+    "Presente de indicativo de verbos regulares -ar, -er, -ir (hablo, comes, vive, trabajamos) en rutinas y hechos",
+    "Género y número de sustantivos y adjetivos con concordancia (el libro rojo, las casas blancas, una chica alta)",
+    "Artículos definidos e indefinidos (el, la, los, las, un, una, unos, unas) con concordancia de género y número",
+    "Pronombres personales sujeto (yo, tú, él, ella, usted, nosotros, ustedes, ellos, ellas) y concordancia con el verbo",
+    "Verbos reflexivos de rutina en presente (me levanto, te duchas, se llama, nos acostamos)",
+    "Demostrativos este/esta/estos/estas y ese/esa/esos/esas con objetos cotidianos",
+    "Posesivos mi/mis, tu/tus, su/sus, nuestro/nuestra/nuestros/nuestras",
+    "Preguntas con qué, dónde, cómo, cuándo, quién, cuántos/cuántas y de dónde sobre datos cotidianos",
+]
+
+VOCAB_TARGETS_ES = [
+    "Saludos, despedidas y presentaciones (hola, buenos días, me llamo, mucho gusto, hasta luego)",
+    "Números del 0 al 100 y la hora (son las tres y media, es la una)",
+    "Días de la semana y meses del año",
+    "Países, nacionalidades e idiomas con concordancia de género (Colombia, colombiano/colombiana, hablo inglés)",
+    "Profesiones y lugares de trabajo (médico, profesora, estudiante, hospital, escuela)",
+    "La familia y la descripción de personas (alto, joven, simpático, pelo largo)",
+    "La casa: habitaciones y objetos cotidianos (cocina, dormitorio, mesa, cama, lámpara)",
+    "La ciudad: lugares y transporte (supermercado, banco, parque, hospital, autobús)",
+    "La ropa y los colores",
+    "La comida y las bebidas: alimentos comunes, pedir en una cafetería y gustos",
+    "El tiempo atmosférico (hace calor, hace frío, llueve, está nublado)",
+]
+
+# Sin contexto varias opciones son válidas:
+#   "La sopa ___ fría."      -> es / está      "___ libro es mío."   -> este / ese
+#   "___ casa es grande."    -> mi / tu / su   "___ vive en Cali."   -> él / ella
+CONTEXT_TOPICS_ES = (
+    "Ser y estar",
+    "Hay frente a estar",
+    "Pronombres personales",
+    "Demostrativos",
+    "Posesivos",
+)
+GENDER_CUE_TOPICS_ES = ("Pronombres personales", "Posesivos")
+
+FORBIDDEN_ES = (
+    "any past tense (fui, comí, comía, he comido), any future (iré, voy a ir), subjunctive, "
+    "conditional (gustaría, podría), commands and imperative forms, combined object pronouns (se lo, me la), "
+    "impersonal or passive se, idioms, regional slang, rare or abstract vocabulary"
+)
+
+# Filtro por código (español). Solo presente: se anulan pasados, futuros, subjuntivo, condicional e imperativo.
+FORBIDDEN_RE_ES = es.compilar(
+    es.PERFECTO, es.PLUSCUAMPERFECTO, es.PASADOS_COMUNES, es.FUTURO_SIMPLE, es.IR_A,
+    es.CONDICIONAL_SIMPLE, es.CORTESIA, es.SUBJ_PRESENTE, es.SUBJ_IMPERFECTO, es.IMPERATIVO,
 )
 
 # ---------- Escritura / habla ----------

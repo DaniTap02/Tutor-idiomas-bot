@@ -8,10 +8,12 @@ Diferencias con A2:
   - Mini-textos más largos (55-120 palabras) y el CÓDIGO elige el tipo de pregunta de comprensión
     (idea principal / detalle / actitud o intención del autor).
   - Escritura: el código elige al azar UNA tarea entre varias (WRITING_TASKS), cada una con su checklist.
-  - Temas propios para el examen en español (GRAMMAR_TARGETS_ES, VOCAB_TARGETS_ES, FORBIDDEN_ES),
-    porque varios temas de B1 no tienen equivalente en español (-ed/-ing, do/make, for/since).
+  - Temas propios para el examen en español (GRAMMAR_TARGETS_ES, VOCAB_TARGETS_ES, FORBIDDEN_ES y el
+    resto de atributos _ES), tomados del temario B1 de español, no traducidos del inglés.
 """
 import re
+
+from exam import espanol as es
 
 LEVEL = "B1"
 
@@ -132,33 +134,83 @@ PASSAGE_TARGETS = [
 ]
 
 # ---------- Temas para el examen en ESPAÑOL ----------
-# Varios temas de B1 no existen en español (adjetivos -ed/-ing, do/make, for/since), así que se adaptan.
+# Tomados del temario B1 de español: subjuntivo presente (deseos, emociones, duda), contraste de los
+# cuatro pasados, condicional simple para consejos, conectores y "se" impersonal/pasiva refleja.
+# OJO: según el temario, "si tuviera..." y "si hubiera..." (imperfecto de subjuntivo) son de B2.
 GRAMMAR_TARGETS_ES = [
-    "Pretérito indefinido vs pretérito imperfecto (Comía cuando llamaron) y pluscuamperfecto (Ya había salido cuando llegamos)",
-    "Imperfecto para hábitos del pasado y soler + infinitivo (Antes jugaba al fútbol; Solíamos visitar a los abuelos cada verano)",
-    "Pretérito perfecto (he vivido; ya/todavía no, nunca, alguna vez, hace/desde) y llevar/estar + gerundio (Llevo una hora esperando)",
-    "Presente vs estar + gerundio, y formas de futuro: futuro simple, ir a + infinitivo y presente con valor de futuro",
-    "Habilidad, posibilidad y permiso: poder, saber + infinitivo, ¿Puedo...?, se puede, estar permitido",
-    "Obligación y consejo: tener que, hay que, deber, no hace falta, deberías, ¿Vamos a...? / ¿Por qué no...?",
-    "Condicional con si: Si llueve, me quedaré en casa; Si tuviera más dinero, compraría un coche",
-    "Condicional perfecto con si (Si hubiera estudiado, habría aprobado el examen)",
-    "Voz pasiva con ser + participio en presente y pasado simple, y la pasiva refleja (Aquí se habla español; El puente fue construido en 1990)",
-    "Comparativos y superlativos (más/menos... que, tan... como, el más..., mejor/peor)",
-    "Estilo indirecto básico: afirmaciones y preguntas sencillas (Dijo que estaba cansado; Preguntó si me gustaba)",
-    "Oraciones de relativo especificativas y explicativas con que, quien, donde, cuyo, el cual",
-    "Verbos + infinitivo o gerundio y perífrasis comunes (decidir + infinitivo, dejar de, acabar de, seguir + gerundio, empezar a)",
-    "Ser y estar con adjetivos que cambian de sentido (es aburrido / está aburrido; es listo / está listo)",
-    "Conectores: sin embargo, aunque, porque, así que, además, a pesar de que",
+    "Presente de subjuntivo para deseos con querer que, esperar que y ojalá (Quiero que vengas; Ojalá llueva mañana)",
+    "Presente de subjuntivo para emociones y reacciones (Me alegra que estés aquí; Me molesta que llegues tarde)",
+    "Presente de subjuntivo para duda y probabilidad (No creo que venga; Es posible que llueva) frente al indicativo (Creo que viene)",
+    "Pretérito perfecto (he estado, ya, todavía no, nunca, alguna vez, hoy, este año) frente al indefinido (ayer, el año pasado)",
+    "Pluscuamperfecto para una acción anterior a otra pasada (Cuando llegamos, el tren ya había salido)",
+    "Contraste de pasados en un relato: indefinido, imperfecto, perfecto y pluscuamperfecto",
+    "Condicional simple para consejos, deseos y cortesía (Yo que tú, compraría un coche; Deberías descansar; Me gustaría viajar)",
+    "Voz pasiva refleja e impersonalidad con se (Se vende casa; Aquí se habla español; Se necesitan camareros)",
+    "Conectores discursivos: sin embargo, por lo tanto, además, aunque, porque, así que, en cambio",
 ]
 
 VOCAB_TARGETS_ES = [
-    "Viajes y vacaciones: reservar hoteles, comprar pasajes, direcciones, transporte, problemas durante un viaje",
-    "Trabajo y estudios: profesiones, entrevistas sencillas, rutinas laborales, planes de estudio",
-    "Vida cotidiana y tiempo libre: deportes, aficiones, entretenimiento, cocina y restaurantes",
-    "Salud y bienestar: estilo de vida saludable, partes del cuerpo, síntomas básicos en el médico",
-    "Medio ambiente y tecnología: naturaleza, contaminación, reciclaje, redes sociales, aparatos electrónicos de uso diario",
-    "Pares de palabras comunes: por/para, decir/hablar/contar, desde/hace/durante, tan/tanto",
+    "Opiniones y debates: creo que, en mi opinión, estoy de acuerdo, no estoy de acuerdo, por un lado... por otro",
+    "Sentimientos y estados de ánimo: alegría, frustración, sorpresa, aburrimiento, estar harto, estar emocionado",
+    "Medios de comunicación y tecnología: redes sociales, noticias, internet, aplicaciones, descargar, compartir",
+    "Mundo laboral y estudios: currículum, entrevista de trabajo, sueldo, carrera, prácticas, planes profesionales",
+    "Viajes: problemas durante un viaje (perder el vuelo, el equipaje, una reclamación, el alojamiento)",
+    "Pares de palabras que se confunden: por/para, saber/conocer, pedir/preguntar, llevar/traer",
 ]
+
+# Tipos de mini-texto propios del examen en español. Deben seguir coincidiendo con PASSAGE_ATTITUDE_RE
+# (article / e-mail / letter / opinion / blog) para que haya preguntas de actitud del autor.
+PASSAGE_TARGETS_ES = [
+    "a short newspaper-style article about a local event, a new technology or a piece of news",
+    "a public announcement or job advertisement (requirements, conditions and how to apply)",
+    "an informal email from a friend who tells some news, expresses feelings and asks for something",
+    "a formal or semi-formal email or letter (a complaint about a trip, a request for information)",
+    "a short blog post or opinion text about social media, studying or working from home",
+]
+
+# Sin contexto varias opciones son válidas:
+#   "Quiero que ___ ."        -> vengas / llames / comas      "___ estado en Lima." -> he / había
+#   "Llovía, ___ salimos."    -> sin embargo / así que         "Lo hice ___ ti."     -> por / para
+CONTEXT_TOPICS_ES = (
+    "Presente de subjuntivo",
+    "Pretérito perfecto",
+    "Pluscuamperfecto",
+    "Contraste de pasados",
+    "Condicional simple",
+    "Conectores",
+    "Pares de palabras",
+)
+
+GEN_STYLE_ES = "Use common everyday words and clear sentences of intermediate level (not too long)."
+GEN_EXAMPLES_ES = (
+    '{"q": "Mi madre está enferma. Espero que ___ pronto.", "correct": "se mejore", "wrong": ["se mejora", "se mejoró"]}\n'
+    '{"q": "Cuando llegamos a la estación, el tren ya ___ .", "correct": "había salido", "wrong": ["sale", "saldrá"]}\n'
+    '{"q": "Para viajar en tren necesitas un billete. Lo puedes comprar en la ___.", '
+    '"correct": "taquilla", "wrong": ["farmacia", "biblioteca"]}'
+)
+# Ejemplo largo (~75 palabras), igual que en inglés: con uno corto el modelo copia ese largo.
+PASSAGE_EXAMPLE_ES = (
+    '{"text": "Estimado señor Gómez: le escribo por el curso de inglés que empecé el mes pasado. '
+    'Lamentablemente, los grupos son muy grandes y el profesor no tiene tiempo para ayudar a cada '
+    'estudiante. Además, el salón es muy caluroso y ruidoso porque las ventanas no cierran bien. '
+    'Me gustan las clases, pero creo que la escuela debería ofrecer grupos más pequeños. '
+    'Por favor, infórmeme de otras opciones. Atentamente, María López", '
+    '"q": "¿Por qué escribe María la carta?", "correct": "Para pedir una mejor solución", '
+    '"wrong": ["Para dejar el curso", "Para agradecer al profesor"]}'
+)
+
+FORBIDDEN_ES = (
+    "imperfect subjunctive and si-clauses with it (si tuviera..., compraría; si hubiera estudiado...), "
+    "conditional perfect (habría hecho), future perfect (habrá hecho), concessive clauses with subjunctive "
+    "(aunque llueva, por más que estudie), relative clauses with subjunctive (busco un trabajo que tenga...), "
+    "reported speech with tense changes (dijo que vendría), ser/estar with a change of meaning "
+    "(ser listo / estar listo), idioms and proverbs, regional slang, rare, technical or very abstract vocabulary"
+)
+
+# Filtro por código (español). Solo se anulan estructuras de B2: imperfecto de subjuntivo,
+# condicional compuesto y futuro compuesto. El presente de subjuntivo, los pasados, el condicional
+# simple y el se impersonal SÍ se evalúan en B1. ("quisiera" se permite: es cortesía.)
+FORBIDDEN_RE_ES = es.compilar(es.SUBJ_IMPERFECTO, es.CONDICIONAL_COMPUESTO, es.FUTURO_COMPUESTO)
 
 # Prohibido en preguntas B1 (lo ve el modelo en el prompt)
 FORBIDDEN = (
@@ -167,13 +219,6 @@ FORBIDDEN = (
     "causative have/get something done, modal perfects (should have, must have, might have, could have; "
     "'would have' ONLY in the third conditional), uncommon phrasal verbs, idioms, "
     "rare, technical or very abstract vocabulary"
-)
-
-FORBIDDEN_ES = (
-    "present subjunctive after verbs of wish, doubt or emotion (espero que..., quiero que...), "
-    "commands and imperative forms, future perfect, passive voice in compound tenses, "
-    "complex reported speech with several tense changes, idioms and proverbs, "
-    "regional slang, rare, technical or very abstract vocabulary"
 )
 
 # Filtro por código (solo inglés). Solo se prohíben estructuras de B2 o superiores.

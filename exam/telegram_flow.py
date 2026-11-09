@@ -240,16 +240,28 @@ def _opciones_y_filas(opciones: list[str], prefijo: str, indice: int) -> tuple[s
     return "", filas
 
 
+def _checklist(banco, skill: str, language: str) -> list[dict]:
+    """Checklist de la tarea (skill "writing" o "speaking") para el idioma del examen.
+    En español usa TASK_CHECKLIST_ES si el banco lo define (algunos requisitos nombran gramática
+    inglesa, como "going to"); si no, el de inglés."""
+    if language == "es" and skill in getattr(banco, "TASK_CHECKLIST_ES", {}):
+        return banco.TASK_CHECKLIST_ES[skill]
+    return banco.TASK_CHECKLIST[skill]
+
+
 def _tarea_escritura(banco, ex: dict) -> tuple[dict, list[dict]]:
     """(prompt por idioma, checklist) de la tarea de escritura de este examen.
     Si el banco define WRITING_TASKS (B1), usa la tarea elegida al azar y guardada en ex["writing_task"]
-    (solo su id, para que sobreviva a la persistencia). Si no (A1, A2), usa WRITING_PROMPT y TASK_CHECKLIST."""
+    (solo su id, para que sobreviva a la persistencia). Si no (A1, A2), usa WRITING_PROMPT y TASK_CHECKLIST.
+    En español, una tarea puede traer "checklist_es" y el banco TASK_CHECKLIST_ES."""
+    es = ex.get("language") == "es"
     tareas = getattr(banco, "WRITING_TASKS", None)
     if tareas:
         tarea = next((t for t in tareas if t["id"] == ex.get("writing_task")), None)
         if tarea:
-            return tarea["prompt"], tarea["checklist"]
-    return banco.WRITING_PROMPT, banco.TASK_CHECKLIST["writing"]
+            checklist = tarea.get("checklist_es", tarea["checklist"]) if es else tarea["checklist"]
+            return tarea["prompt"], checklist
+    return banco.WRITING_PROMPT, _checklist(banco, "writing", ex.get("language", "en"))
 
 
 def _elegir_tarea_escritura(banco, ex: dict):
@@ -646,7 +658,7 @@ async def voz_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
             texto,
             ex["level"],
             ex["language"],
-            banco.TASK_CHECKLIST["speaking"],
+            _checklist(banco, "speaking", ex["language"]),
             True,        # is_transcript: ignora puntuación y mayúsculas
             "Spanish",   # feedback_language
             "speaking",  # skill: los mensajes hablan de "audio" y "habla"
