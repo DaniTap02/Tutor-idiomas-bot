@@ -2,7 +2,7 @@
 
 # 🗣️ Tutor Inteligente de Idiomas
 
-**Un tutor de idiomas en Telegram, con examen de nivel de lectura, escucha, escritura y habla**
+Al primer contacto con el bot, el usuario realiza un **examen inicial de nivel** con cuatro partes —**lectura, escucha, escritura y habla**— que determina su nivel de partida. A partir de ahí, el sistema entrega lecciones, ejercicios y retroalimentación adaptados a su desempeño, y envía recordatorios de estudio por Telegram.
 
 Inglés 🇬🇧 y español 🇪🇸 · Proyecto de la materia *Sistemas Inteligentes*
 
@@ -19,7 +19,11 @@ Inglés 🇬🇧 y español 🇪🇸 · Proyecto de la materia *Sistemas Intelig
 
 </div>
 
----
+- [X] **Fase 0:** diseño y fundamentos
+- [X] **Fase 1:** esqueleto del bot
+- [ ] **Fase 2:** examen de nivel funcional — 🧪 **en pruebas**: A1, A2 y B1 con las cuatro partes (lectura, escucha, escritura y habla), en inglés y español. Falta B2.
+- [ ] **Fase 3:** tutor y contenido adaptativo
+- [ ] **Fase 4:** recordatorios, pulido y evaluación final
 
 ## 📑 Contenido
 
@@ -44,69 +48,106 @@ Al primer contacto, el usuario realiza un **examen inicial** (lectura, escucha, 
 
 > 📌 El tutor es una herramienta de apoyo al aprendizaje: no reemplaza a un docente ni equivale a una certificación oficial.
 
-## 🚦 Estado del proyecto
+## El examen de nivel
 
-| Fase | Descripción | Estado |
-|---|---|---|
-| 0 | Diseño y fundamentos | ✅ Completa |
-| 1 | Esqueleto del bot | ✅ Completa |
-| 2 | Examen de nivel funcional | 🧪 En pruebas: A1, A2, B1 y B2 construidos (lectura, escucha, escritura y habla) en inglés y español; falta validarlos con Ollama y Telegram reales|
-| 3 | Tutor y contenido adaptativo | ⏳ Pendiente |
-| 4 | Recordatorios, pulido y evaluación final | ⏳ Pendiente |
-
-## 📝 Cómo funciona el examen
-
-Al escribir `/start` por primera vez, el usuario elige idioma y rinde el examen empezando por A1. Si pasa un nivel, continúa con el siguiente; el examen se detiene en el primer nivel que **no** pasa.
+El examen se detiene en el primer nivel que **no** se aprueba. Si alguien pasa A2 pero no B1, queda en enseñanza de B1 hasta aprobarlo.
 
 ```mermaid
 flowchart TD
-    A(["/start"]) --> B{¿Ya tiene nivel?}
-    B -- Sí --> M["Menú y práctica"]
-    B -- No --> C["Elegir idioma"]
-    C --> D["Examen A1<br/>lectura → escucha → escritura → habla"]
-    D --> E{¿Pasó A1?}
-    E -- No --> T1["Enseñanza desde A1"]
-    E -- Sí --> F["Examen A2<br/>lectura → escucha → escritura → habla"]
-    F --> G{¿Pasó A2?}
-    G -- No --> T2["Enseñanza desde A2"]
-    G -- Sí --> H["Examen B1<br/>lectura → escucha → escritura → habla"]
-    H --> I{¿Pasó B1?}
-    I -- No --> T3["Enseñanza desde B1"]
-    I -- Sí --> J["Examen B2<br/>lectura → escucha → escritura → habla"]
-    J --> K{¿Pasó B2?}
-    K -- No --> T4["Enseñanza desde B2"]
-    K -- Sí --> L["🎉 Todos los niveles completados"]
+    A["/start (primer contacto)"] --> B["Elegir idioma: inglés o español"]
+    B --> C["Examen A1<br/>lectura → escucha → escritura → habla"]
+    C --> D{"¿Pasó A1?"}
+    D -- No --> E["Enseñanza desde A1"]
+    D -- Sí --> F["Examen A2"]
+    F --> G{"¿Pasó A2?"}
+    G -- No --> H["Enseñanza desde A2"]
+    G -- Sí --> I["Examen B1"]
+    I --> J{"¿Pasó B1?"}
+    J -- No --> K["Enseñanza desde B1"]
+    J -- Sí --> L["Nivel B2 (examen en construcción)"]
 ```
 
-### Contenido por nivel
+### Las cuatro partes
 
-| Parte | A1 | A2 | B1 | B2 |
-|---|---|---|---|---|
-| 📖 **Lectura** | 10 preguntas: 6 de gramática y 4 de vocabulario | 10 preguntas: 5 de gramática, 3 de vocabulario y 2 de **comprensión con mini-texto** (nota, cartel, mensaje o email corto) | 10 preguntas: 4 de gramática, 3 de vocabulario y 3 de **comprensión** con textos más largos (email, noticia, anuncio, blog o reseña) | 10 preguntas: 4 de gramática, 2 de vocabulario y colocaciones, y 4 de **comprensión** con textos de 70 a 130 palabras (artículo, carta formal, blog, opinión, reseña o informe) |
-| 🎧 **Escucha** | 3 audios de 15 a 40 palabras con voz más lenta: mensajes, avisos o una presentación | 3 audios de 25 a 60 palabras: planes que cambian, avisos de estación, direcciones o un fin de semana | 3 audios de 45 a 90 palabras: un problema, una noticia, un relato con sentimientos o un consejo | 3 audios de 70 a 130 palabras: una noticia de radio, un mensaje largo con un problema y su solución, una charla de bienvenida o una opinión con razones |
-| ✍️ **Escritura** | Presentarte en 3 o 4 frases: nombre, de dónde eres y algo que te gusta | Mensaje a un amigo de 25 a 35 palabras sobre tu último fin de semana o vacaciones | Correo a un amigo de 50 a 70 palabras sobre un problema reciente: qué pasó, cómo te sentiste, qué hiciste y qué aprendiste | Correo formal de 80 a 110 palabras sobre un problema con un servicio: qué salió mal, cómo te afectó, qué has hecho ya y qué solución pides |
-| 🎤 **Habla** | Nota de voz de 15 a 30 s: nombre, dónde vives y algo que te gusta | Nota de voz de 30 a 45 s: tu rutina diaria y lo que vas a hacer este fin de semana | Nota de voz de 45 a 60 s: un viaje o experiencia que disfrutaste, por qué te gustó y qué harías la próxima vez | Nota de voz de 60 a 90 s: ¿la tecnología mejora o empeora nuestra vida? Opinión, razones o ejemplos y una desventaja u otro punto de vista |
+| Parte | Qué hace el estudiante | Cómo se califica |
+|---|---|---|
+| 📖 **Lectura** | Responde 10 preguntas de opción múltiple (gramática, vocabulario y comprensión con mini-textos). | Porcentaje de aciertos. |
+| 🎧 **Escucha** | Oye 3 audios cortos (uno por pregunta) y responde con botones. Puede repetir cada audio una vez. | Porcentaje de aciertos. |
+| ✍️ **Escritura** | Escribe un texto según la consigna del nivel. | El agente calificador revisa requisitos y errores. |
+| 🎤 **Habla** | Envía una nota de voz según la consigna del nivel. | Se transcribe en local y el calificador revisa el contenido. |
 
-### Cómo se evalúa
+**Aprobar un nivel:** cada parte evaluada debe sacar **al menos 60** y el promedio **al menos 70** (`exam/placement.py`). Si una parte no se puede evaluar (por ejemplo, la escucha falla porque no hay internet para generar los audios), **no se promedia**: nunca se penaliza al estudiante por un fallo del sistema.
 
-- **Lectura:** las preguntas las genera Ollama en cada examen. El código elige los temas permitidos del nivel, baraja las opciones y descarta las preguntas dudosas (formato, palabras prohibidas y una verificación del modelo que exige una única respuesta válida).
-- **Escucha:** Ollama escribe un texto corto que alguien diría en voz alta y una pregunta sobre él, con los mismos filtros y la misma verificación que la lectura. El texto se convierte en audio con [edge-tts](https://github.com/rany2/edge-tts) y llega como nota de voz; el usuario solo lo **oye** y responde con botones. Puede repetir cada audio **una vez**, y al final del examen se le muestra lo que decía cada audio. Si no se pueden generar las preguntas, el examen sigue sin esta parte; si falla solo el audio, el bot envía el texto.
-- **Escritura:** el calificador revisa el idioma, los requisitos de la tarea y los errores. El LLM solo responde preguntas simples; **el código aplica las reglas y calcula el puntaje**.
-- **Habla:** la nota de voz se transcribe en local con [faster-whisper](https://github.com/SYSTRAN/faster-whisper), se comprueba que esté en el idioma del examen y se califica con el mismo calificador que la escritura. El bot muestra lo que entendió.
-- **Aprobar un nivel:** cada parte (lectura, escucha, escritura y habla) debe sacar **al menos 60** y el promedio **al menos 70**.
+### Las preguntas no están escritas a mano
 
-> ℹ️ La transcripción comprueba que el usuario se hizo entender, pero **no mide la pronunciación fonética**. La comparación fonética sigue en la hoja de ruta.
+No hay banco pregenerado. En cada examen, **Ollama redacta** las preguntas de lectura y los textos de escucha a partir de los temas permitidos del nivel, y el **código** elige el tema, baraja las opciones y decide cuál es la correcta.
 
-Para agregar un nivel nuevo hay que crear su archivo `questions_xx.py` (con el mismo formato que `questions_b2.py`), registrarlo en `BANCOS` dentro de `exam/telegram_flow.py` y agregar su configuración de escucha en `CONFIG` de `exam/listening.py`. Si pasas B2, el examen termina y el nivel queda como B2. El generador de preguntas adapta su estilo a cada nivel con atributos opcionales del banco, como `STYLE_HINT` y `PASSAGE_STYLE`.
+Antes de mostrarse, cada pregunta pasa por tres controles (`exam/question_generator.py` y `exam/listening.py`):
 
-### Práctica (español)
+1. **Filtros de código** (deterministas): formato, tres opciones distintas y cortas, solo alfabeto latino, largo máximo, palabras prohibidas del nivel, que la respuesta correcta no deje palabras repetidas (*"short short hair"*), que los temas que necesitan contexto lo traigan (`CONTEXT_TOPICS`) y que los pronombres con género tengan pista de género. En la escucha, además, nada que solo funcione **escrito**: paréntesis, comillas, enlaces, etiquetas de hablante (`Tom:`) o fórmulas de carta (*"Dear…"*, *"Atentamente"*), y la pregunta no puede hablar de «el texto» ni pedir leer.
+2. **Verificación con el modelo** (una llamada, temperatura 0): debe haber **exactamente una** opción válida y ser la marcada como correcta; el contexto debe alcanzar; el nivel debe ser el adecuado; y en la escucha, la respuesta debe **decirse** en el audio y poder captarse oyendo una o dos veces.
+3. **Evidencia citada y comprobada por código**: el modelo tiene que **copiar las palabras**, ya escritas en la pregunta o el texto, que hacen única la respuesta y descartan las otras. El código comprueba que esa cita exista de verdad. Si el modelo no puede señalar nada —porque no hay nada que señalar—, la pregunta es ambigua y se anula. Es lo que atrapa los casos clásicos:
 
-Fuera del examen, el bot ofrece ejercicios de opción múltiple:
+   | Pregunta | Opciones | Qué pasa |
+   |---|---|---|
+   | `My brother is ___ than my sister.` | taller / younger / shorter | se anula: nada dice cuál |
+   | `It is a ___ book.` | old / new / big | se anula: nada dice cuál |
+   | `My brother is 10 and my sister is 15. My brother is ___ than my sister.` | younger / older / more young | pasa: las edades lo deciden |
 
-- 5 ejercicios de gramática y vocabulario con tres opciones.
-- Se responde escribiendo la palabra o el número de la opción (1, 2 o 3).
-- La comparación ignora mayúsculas y tildes.
-- Explicación después de cada respuesta, sea correcta o no.
+Lo que no pasa se **anula**: no se le muestra al estudiante (no se le penaliza), se registra en `voided_questions.jsonl` y se genera otra. Para ver qué está fallando:
+
+```bash
+python -m exam.void_report              # todo
+python -m exam.void_report listening    # solo la parte de escucha
+```
+
+### Dos agentes con responsabilidades separadas
+
+| | **Validador de preguntas** | **Calificador de respuestas** |
+|---|---|---|
+| Archivos | `question_generator.py`, `listening.py` | `grader.py` |
+| Cuándo actúa | **antes** de que exista el examen | cuando el estudiante ya respondió |
+| Qué decide | si una pregunta es apta: respuesta única, contexto suficiente, nivel correcto, evidencia citada | si la respuesta abierta cumple la tarea y qué errores tiene |
+| Qué NO hace | no ve respuestas de estudiantes | no arregla preguntas malas |
+
+La calidad de las preguntas se garantiza **antes** de empezar el examen: el calificador no está ahí para tapar fallos del validador. Solo comparten el modelo de Ollama y el criterio de nivel.
+
+El calificador **juzga el significado**, nunca compara con una respuesta esperada (de hecho no existe ninguna: las tareas de escritura y habla son abiertas). Acepta contracciones (*I'm* = *I am*), sinónimos, estructuras distintas y variantes regionales, y una errata que no cambie el sentido cuenta como error de ortografía pero **no** invalida el requisito. Cuando una respuesta está a medias, dice **qué falta y por qué**, en vez de marcarla incorrecta sin más.
+
+### Audio: cómo funciona
+
+- **Escucha (texto a voz):** `exam/tts.py` usa [edge-tts](https://pypi.org/project/edge-tts/) (voces neuronales de Microsoft), que **necesita internet**, igual que Telegram. Reintenta los fallos pasajeros y, si falla del todo y tienes instalado `gTTS`, lo usa como respaldo. edge-tts entrega `.mp3`, y la API de Telegram pide **OGG/OPUS** para una nota de voz, así que `exam/audio.py` convierte el mp3 con **PyAV** (llega con faster-whisper: **no necesitas ffmpeg**). Si la conversión no se puede hacer, el audio se envía como archivo de audio, que también es un formato aceptado.
+- **Habla (voz a texto):** `exam/stt.py` usa [faster-whisper](https://pypi.org/project/faster-whisper/) **en local, sin internet** (salvo la primera descarga del modelo). El formato de Telegram no necesita conversión: PyAV lo decodifica. El idioma se **fuerza** al del examen: dejando que Whisper lo adivine, un acento marcado hablando inglés se detectaba como otro idioma y se rechazaba una respuesta correcta. Quién decide si el estudiante habló en el idioma pedido es el calificador, que juzga el **contenido**.
+- Si no se puede generar un audio de la escucha, el examen muestra el texto escrito para no frenarse, lo anota en la revisión final y **esa pregunta no cuenta** en el puntaje de escucha: midió lectura, no escucha.
+
+> **Importante:** la parte de habla califica **lo que se dijo**, no la pronunciación. La confianza de la transcripción solo se usa para pedir que grabe de nuevo cuando el audio no se entiende (ruido, micrófono lejano). La comparación fonética sigue en la hoja de ruta.
+
+### Cuando el audio falla: el motivo real, no un mensaje genérico
+
+Cada etapa del audio falla por separado y con su propia causa (`exam/registro.py`), así que el bot **no dice «¿tienes internet?» cuando el problema es otro**. Solo el motivo `red` significa que no se pudo conectar; un error del propio servicio, el reloj del PC desajustado o un rechazo de Telegram son motivos distintos, con mensajes distintos para el estudiante y con el error técnico original (tipo de excepción, mensaje y tiempos) en el registro.
+
+| Parte | Motivos posibles |
+|---|---|
+| Texto a voz | `red` · `tiempo` · `reloj` · `servicio` · `corte` · `vacio` · `escritura` · `dependencia` |
+| Conversión y archivos | `formato` · `convertir` · `archivo_vacio` · `archivo_falta` |
+| Envío por Telegram | `envio` · `envio_prohibido` |
+| Voz a texto | `dependencia` · `modelo_descarga` · `modelo_carga` · `memoria` · `transcripcion` · `sin_voz` |
+
+Para saber qué pasa **en tu PC**, hay un comando que prueba cada componente por separado:
+
+```bash
+python -m exam.diagnostico          # entorno, dependencias, Ollama, texto a voz y voz a texto
+python -m exam.diagnostico audio    # solo el audio
+python -m exam.diagnostico ollama    # solo Ollama
+```
+
+Genera un audio de prueba, lo convierte, lo vuelve a transcribir (comprueba las dos partes de punta a punta) y, si algo falla, dice el motivo real y qué hacer. Los archivos y el registro técnico completo quedan en `diagnostico_audio/`. No imprime el token de Telegram ni ninguna clave.
+
+## Estado actual del código
+
+- **Examen de nivel** (`exam/`): A1, A2 y B1 con las cuatro partes, en inglés y español. B2 pendiente.
+- **Prototipo de práctica** (`bot.py`): 5 ejercicios de opción múltiple en español (`/practicar`), que es lo que había antes del examen y queda como base de la fase 3.
+- El nivel del usuario **sobrevive al reiniciar el bot** (`PicklePersistence` en `datos_bot.pkl`).
 
 <details>
 <summary><b>➕ Cómo agregar ejercicios de práctica</b></summary>
@@ -128,22 +169,36 @@ Cada ejercicio debe tener exactamente tres opciones, porque el bot acepta las re
 
 | Comando | Descripción |
 |---|---|
-| `/start` | Inicia el examen si es la primera vez; si ya tiene nivel, muestra el menú |
+| `/start` | Primera vez: lanza el examen de nivel. Después: menú con el nivel actual |
+| `/reiniciar` | Borra el nivel y repite el examen (para pruebas) |
 | `/help` | Ayuda de uso |
-| `/practicar` | Presenta un ejercicio aleatorio |
+| `/practicar` | Presenta un ejercicio aleatorio de español |
 | `/siguiente` | Cambia a otro ejercicio |
 | `/puntos` | Muestra respuestas correctas e incorrectas |
 | `/reiniciar` | Solo para pruebas: borra el nivel y repite el examen |
 
 ## 📦 Instalación
 
-**Requisitos**
+- Falta el examen **B2**: quien pasa B1 queda en B2 *provisional*.
+- La parte de habla no evalúa **pronunciación**, solo el contenido de lo que se dijo.
+- Generar un examen completo con un modelo de 7B en un PC con 8 GB de RAM **tarda varios minutos**.
+- Todavía no hay contenido de lecciones (fase 3), base de datos de progreso ni recordatorios.
+- La puntuación de `/practicar` se guarda por sesión.
 
 - Python 3.10 o superior
 - Una cuenta de Telegram y un token de bot creado con [@BotFather](https://t.me/BotFather)
 - [Ollama](https://ollama.com/) con el modelo `qwen2.5:7b` (o el que configures con `OLLAMA_MODEL`)
 
-**Pasos**
+- **Python 3.10 o superior** (probado con 3.13).
+- Una cuenta de Telegram y un token de bot creado con [@BotFather](https://t.me/BotFather).
+- [**Ollama**](https://ollama.com) corriendo en local con un modelo descargado (por defecto `qwen2.5:7b`):
+  ```bash
+  ollama pull qwen2.5:7b
+  ollama list
+  ```
+- **Internet** para los audios de la escucha (edge-tts) y para Telegram. La transcripción del habla y Ollama funcionan sin internet.
+
+## Instalación
 
 ```bash
 # 1. Clonar el repositorio
@@ -159,16 +214,11 @@ source .venv/bin/activate
 
 # 3. Instalar dependencias
 pip install -r requirements.txt
-
-# 4. Descargar el modelo de Ollama
-ollama pull qwen2.5:7b
 ```
 
-> ⏱️ La primera nota de voz tarda más: faster-whisper descarga su modelo (unos 500 MB con `small`).
->
-> 🌐 Los audios de la escucha usan edge-tts, que **necesita internet** (igual que Telegram). Como respaldo, si tienes instalado `gTTS` (`pip install gTTS`) se usa cuando edge-tts falla. No necesitas ffmpeg.
+La primera nota de voz **descarga el modelo de Whisper** (unos 150 MB con el modelo `base`) y tarda más que las siguientes.
 
-## ⚙️ Configuración
+## Configuración
 
 1. Abre [@BotFather](https://t.me/BotFather) en Telegram, envía `/newbot` y sigue los pasos para obtener el token.
 2. Crea un archivo `.env` en la raíz del proyecto:
@@ -179,18 +229,29 @@ TELEGRAM_BOT_TOKEN=tu_token_aqui
 
 **Variables opcionales**
 
-| Variable | Descripción | Por defecto |
+### Variables de entorno opcionales
+
+Todas tienen un valor por defecto que funciona; se ajustan si el PC va justo de recursos.
+
+| Variable | Por defecto | Para qué |
 |---|---|---|
-| `OLLAMA_URL` | Dirección del servidor de Ollama | `http://localhost:11434` |
-| `OLLAMA_MODEL` | Modelo para generar preguntas y calificar | `qwen2.5:7b` |
-| `WHISPER_MODEL` | Modelo de transcripción (`base` es más rápido, `small` más preciso) | `small` |
-| `EXAM_WORKERS` | Preguntas generadas en paralelo (más puede saturar la RAM) | `1` |
+| `OLLAMA_MODEL` | `qwen2.5:7b` | Modelo que redacta y califica (usa el tag de `ollama list`) |
+| `OLLAMA_URL` | `http://localhost:11434` | Dirección de Ollama |
+| `OLLAMA_NUM_CTX` | `2048` | Tamaño de contexto |
+| `OLLAMA_TIMEOUT` | `120` | Segundos de espera por llamada |
+| `EXAM_WORKERS` | `1` | Preguntas generadas en paralelo (más de 1 ahoga la RAM) |
+| `EXAM_LISTENING_N` | el del nivel (3) | Cuántos audios de escucha; bájalo a `2` para probar más rápido |
+| `EXAM_EXIGIR_EVIDENCIA` | `1` | Exige que el modelo cite qué descarta las otras opciones. `0` lo desactiva: genera más rápido pero deja pasar preguntas ambiguas |
+| `EXAM_VOID_LOG` | `voided_questions.jsonl` | Dónde se registran las preguntas anuladas |
+| `WHISPER_MODEL` | `base` | `tiny`, `base`, `small`, `medium`. `tiny` si el PC sufre; `small` si quieres más precisión |
+| `WHISPER_DEVICE` | `cpu` | `cuda` si tienes GPU NVIDIA con VRAM suficiente |
+| `WHISPER_COMPUTE` | `int8` | Precisión del modelo de voz |
+| `WHISPER_BEAM` | `5` | Bájalo a `1` para transcribir más rápido |
+| `TTS_TIMEOUT` | `40` | Segundos de espera por audio generado |
+| `TTS_INTENTOS` | `3` | Reintentos con edge-tts antes de pasar al respaldo |
+| `TTS_NOTA_VOZ` | `1` | `0` para no convertir a OGG/OPUS y enviar siempre el mp3 como archivo de audio |
 
-> 🔒 **Seguridad:** `.env` ya está en `.gitignore`. No lo subas al repositorio ni lo compartas (por ejemplo, dentro de un `.zip`). Si el token se expone, revócalo con `/revoke` en @BotFather y genera uno nuevo.
-
-## ▶️ Ejecución y pruebas
-
-Con Ollama encendido:
+## Ejecución
 
 ```bash
 python bot.py
@@ -198,73 +259,77 @@ python bot.py
 
 Luego abre tu bot en Telegram y escribe `/start`. El bot usa *long polling*, por lo que no necesita servidor público ni webhook.
 
-**Probar el examen sin Telegram**
+> El bot **no puede correr en dos computadores a la vez** con el mismo token: Telegram da un error de conflicto. Apaga uno antes de encender el otro.
+
+## Pruebas
+
+Cinco pruebas **no necesitan internet, ni Ollama, ni el modelo de Whisper**: simulan el modelo y Telegram, y `test_audio` trabaja con archivos de audio reales que crea PyAV. Son 218 comprobaciones y tardan unos segundos.
 
 ```bash
-python -m exam.test_a1
-python -m exam.test_a2
-python -m exam.test_b1
-python -m exam.test_b2
-python -m exam.test_escucha          # escucha A1 en inglés
-python -m exam.test_escucha B1 es    # escucha de otro nivel o idioma
+python -m exam.test_validacion            # filtros y validación de la LECTURA
+python -m exam.test_escucha_validacion    # filtros y validación de la ESCUCHA
+python -m exam.test_calificador           # el calificador de escritura y habla
+python -m exam.test_audio                 # conversión, sondeo y motivos de error del audio
+python -m exam.test_flujo                 # el examen completo simulado de punta a punta
 ```
 
-Imprimen las preguntas generadas y califican textos de ejemplo. `test_escucha` genera las preguntas de escucha y guarda los audios en `audio_prueba/` para que los escuches y compruebes que la voz funciona, sin pasar por Telegram. Más detalles en `comandos_terminal.txt`.
+Las demás sí usan Ollama (y la de escucha, internet para el audio):
 
-## 🗂️ Estructura del proyecto
+```bash
+python -m exam.test_a1                    # preguntas y calificador de A1
+python -m exam.test_a2
+python -m exam.test_b1
+python -m exam.test_escucha               # escucha A1 en inglés
+python -m exam.test_escucha B1 es         # otro nivel u otro idioma
+```
+
+`test_escucha` guarda los `.mp3` en `audio_prueba/` para que los escuches y compruebes que se entienden, sin pasar por Telegram. Más detalles en `comandos_terminal.txt`.
+
+## Estructura del proyecto
 
 ```
 Tutor-idiomas-bot/
-├── bot.py                     # Comandos, práctica y manejadores
+├── bot.py                          # Comandos, ejercicios de práctica y registro de manejadores
 ├── exam/
-│   ├── telegram_flow.py       # Flujo del examen: lectura, escucha, escritura y habla
-│   ├── stt.py                 # Transcripción de notas de voz (faster-whisper)
-│   ├── tts.py                 # Texto a voz para la escucha (edge-tts)
-│   ├── listening.py           # Generación de preguntas de escucha y su configuración por nivel
-│   ├── grader.py              # Calificador con Ollama (escritura y habla)
-│   ├── question_generator.py  # Generación y verificación de preguntas de lectura
-│   ├── placement.py           # Reglas para pasar de nivel
-│   ├── questions_a1.py        # Temas, tareas y checklist del examen A1
-│   ├── questions_a2.py        # Temas, tareas y checklist del examen A2
-│   ├── questions_b1.py        # Temas, tareas y checklist del examen B1
-│   ├── questions_b2.py        # Temas, tareas y checklist del examen B2
-│   ├── test_a1.py             # Prueba por terminal (A1)
-│   ├── test_a2.py             # Prueba por terminal (A2)
-│   ├── test_b1.py             # Prueba por terminal (B1)
-│   ├── test_b2.py             # Prueba por terminal (B2)
-│   └── test_escucha.py        # Prueba de la escucha: preguntas y audios
-├── requirements.txt           # Dependencias
-├── comandos_terminal.txt      # Guía para probar el examen
-├── .env                       # Token de Telegram (no se versiona)
-└── .gitignore                 # Excluye .env, .venv/, __pycache__/, *.pyc, datos_bot.pkl y audio_prueba/
+│   ├── telegram_flow.py            # Flujo del examen: lectura → escucha → escritura → habla
+│   ├── question_generator.py       # Genera y VALIDA las preguntas de lectura con Ollama
+│   ├── listening.py                # Genera y valida los textos de escucha + su configuración por nivel
+│   ├── grader.py                   # Agente calificador de escritura y habla (Ollama)
+│   ├── tts.py                      # Texto a voz para la escucha (edge-tts, respaldo gTTS)
+│   ├── stt.py                      # Voz a texto del habla (faster-whisper, en local)
+│   ├── audio.py                    # Sondeo de archivos y conversión a nota de voz (PyAV)
+│   ├── registro.py                 # Motivos de error, registro con etapas y tiempos, sin secretos
+│   ├── diagnostico.py              # Prueba cada componente y dice qué falla en tu PC
+│   ├── placement.py                # Reglas de aprobación y a qué nivel pasa
+│   ├── questions_a1.py             # Banco A1: temas, prohibidos, consignas y checklists
+│   ├── questions_a2.py             # Banco A2
+│   ├── questions_b1.py             # Banco B1 (varias tareas de escritura, temas propios en español)
+│   ├── void_report.py              # Resumen de las preguntas anuladas
+│   ├── test_validacion.py          # Pruebas de la lectura (sin Ollama)
+│   ├── test_escucha_validacion.py  # Pruebas de la escucha (sin Ollama)
+│   ├── test_calificador.py         # Pruebas del calificador (sin Ollama)
+│   ├── test_audio.py               # Pruebas del audio con archivos reales (sin internet)
+│   ├── test_flujo.py               # Prueba del examen completo (sin Telegram ni Ollama)
+│   ├── test_a1.py / test_a2.py / test_b1.py   # Pruebas con Ollama
+│   ├── test_escucha.py             # Prueba de la escucha con audios reales
+│   ├── RESUMEN_A2.txt / B1.txt     # Alcance de cada nivel, en texto
+│   └── RESUMEN_AUDIO.txt           # Cómo quedaron la escucha y el habla
+├── requirements.txt
+├── comandos_terminal.txt           # Guía de comandos paso a paso
+├── voided_questions.jsonl          # Registro de preguntas anuladas (se va llenando solo)
+├── .env                            # Token de Telegram (no se versiona)
+└── README.md
 ```
 
-<details>
-<summary><b>🔍 Cómo funciona el código</b></summary>
+### Agregar el nivel B2
 
-**Flujo de escucha**
+1. Crear `exam/questions_b2.py` con el mismo formato que `questions_b1.py`.
+2. Registrarlo en `BANCOS`, dentro de `exam/telegram_flow.py`.
+3. La configuración de escucha de B2 **ya está** en `CONFIG`, en `exam/listening.py`.
 
-- Al terminar la lectura, `responder_lectura()` pasa a la parte `escucha`; las preguntas se generan al preparar el examen con `generate_listening()`.
-- `_enviar_audio()` convierte el texto en `.mp3` con `synthesize()` (edge-tts, con una voz distinta según la pregunta y más lenta en A1) y lo envía como nota de voz.
-- Los botones `lis:` registran la respuesta y `rep:` repite el audio (una vez por pregunta). El puntaje se guarda en `scores["escucha"]`.
-- La configuración de cada nivel (número de audios, largo de los textos, velocidad y temas) está en `CONFIG` de `listening.py`.
+El generador adapta su estilo a cada nivel con los atributos opcionales del banco (`GEN_STYLE`, `PASSAGE_SHAPE`, `FORBIDDEN_RE`, `CONTEXT_TOPICS`…), documentados al inicio de `exam/question_generator.py`.
 
-**Flujo de voz**
-
-- `telegram_flow.py` pasa de la escritura a la parte `habla` y envía la consigna del nivel.
-- Cuando llega una nota de voz, `voz_de_examen()` la descarga a una carpeta temporal y llama a `transcribe()` en un hilo, para no congelar el bot.
-- `transcribe()` devuelve el texto y el idioma detectado; si no coincide con el del examen, se pide repetir el audio. Los audios de menos de 8 segundos también se rechazan.
-- El texto se califica con `grade(..., is_transcript=True)` y el checklist `speaking` del nivel; el puntaje se guarda en `scores["habla"]`.
-
-**`bot.py`**
-
-- `EJERCICIOS`: lista de diccionarios con `pregunta`, `opciones`, `respuesta` y `explicacion` (modo práctica).
-- `normalizar()`: pasa el texto a minúsculas y elimina tildes para comparar respuestas.
-- `responder()` atiende primero el examen (si está en curso) y, si no, compara la respuesta con la correcta.
-- `voz()` envía las notas de voz al examen; fuera del examen avisa que aún no se usan.
-- `main()` registra los manejadores y arranca el bot con `run_polling()`.
-
-</details>
+### Agregar ejercicios de práctica
 
 ## 🧠 Diseño del agente (PEAS)
 
@@ -277,8 +342,16 @@ Tutor-idiomas-bot/
 | **Sensores** | Mensajes de texto, notas de voz, documentos e imágenes, respuestas de examen y ejercicios, horarios de recordatorio e historial en base de datos. |
 | **Actuadores** | Aplicar el examen, asignar y actualizar el nivel, enviar lecciones y material, evaluar respuestas, ajustar la dificultad, registrar el progreso y enviar recordatorios. |
 
-<details>
-<summary><b>📈 Métricas, propiedades del entorno y desafíos</b></summary>
+- [X] Examen inicial de nivel con lectura, escucha, escritura y habla.
+- [X] Validación de preguntas: nada ambiguo, fuera de nivel o sin contexto llega al estudiante.
+- [X] Notas de voz con reconocimiento de voz (STT) en local.
+- [X] Niveles y currículo A1, A2 y B1 por idioma (inglés y español).
+- [ ] Examen B2.
+- [ ] Comparación fonética para evaluar pronunciación.
+- [ ] Tutor adaptativo que ajuste la dificultad según el desempeño.
+- [ ] Contenido de lecciones por nivel e idioma; tercer idioma opcional según el tiempo.
+- [ ] Base de datos para el historial de progreso.
+- [ ] Recordatorios de estudio por Telegram con horario configurable.
 
 **Métricas de éxito:** precisión del examen inicial (nivel asignado frente a una referencia o autoevaluación), porcentaje de errores que no se repiten tras la retroalimentación, tasa de retorno tras un recordatorio y coherencia entre el desempeño y el ajuste de dificultad.
 
@@ -328,7 +401,7 @@ Tutor-idiomas-bot/
 **Ramas**
 
 - `main`: rama principal.
-- `laura`: rama de trabajo.
+- `laura`, `jp-dev`: ramas de trabajo del equipo.
 
 **Contribuir**
 

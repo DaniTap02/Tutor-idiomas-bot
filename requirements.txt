@@ -1,20 +1,27 @@
-anyio==4.15.1
-av==19.0.2
-certifi==2026.10.23
-ctranslate2==4.8.4
-faster-whisper==1.2.1
-flatbuffers==25.12.19
-h11==0.16.0
-hf-xet==1.8.0
-httpcore==1.0.9
-httpcore2==2.16.0
-httpx==0.28.1
-httpx2==2.16.0
-huggingface-hub==2.4.0
-idna==3.20
-onnxruntime==1.31.1
-python-dotenv==1.2.4
+# Dependencias directas del proyecto. Instalar con:
+#     pip install -r requirements.txt
+# (las librerías que estas necesitan por debajo las instala pip automáticamente)
+
+# --- Bot de Telegram ---
 python-telegram-bot==22.8
-tokenizers==0.23.3
-truststore==0.10.5
-typing_extensions==4.16.0
+python-dotenv==1.2.4
+
+# --- Llamadas a Ollama (generador de preguntas y calificador) ---
+httpx==0.28.1
+
+# --- Parte de ESCUCHA: texto a voz (necesita internet) ---
+edge-tts==7.3.1
+
+# --- Parte de HABLA: voz a texto en local (descarga el modelo la primera vez) ---
+# Trae ctranslate2, onnxruntime, tokenizers, huggingface-hub y av (PyAV).
+# PyAV lleva las librerias de FFmpeg dentro del paquete, asi que el proyecto NO necesita ffmpeg
+# instalado: con el se leen las notas de voz de Telegram (OGG/OPUS) y se convierte el mp3 de
+# edge-tts a nota de voz. Hay instaladores listos para Windows con Python 3.10 a 3.15.
+faster-whisper==1.2.1
+
+# PyAV: se fija por debajo de 19 por prudencia (faster-whisper 1.2.1 se probo con 16-18).
+# El proyecto decodifica el audio por su cuenta, asi que tambien funciona con versiones nuevas.
+av>=14,<19
+
+# --- Opcional: respaldo del texto a voz si edge-tts falla ---
+# gTTS==2.5.4

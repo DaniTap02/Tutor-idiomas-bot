@@ -1,8 +1,9 @@
 =====================================================================
 RESUMEN: EXAMEN DE UBICACIÓN B1 (BOT DE TELEGRAM)
 =====================================================================
-Estado: examen B1 construido (lectura + escritura). Habla pendiente (prompt y
-checklist ya definidos). Falta B2. Pegar este resumen en otros chats.
+Estado: examen B1 construido y completo (lectura + escucha + escritura + habla).
+Falta B2. La escucha y el habla estan en exam/RESUMEN_AUDIO.txt.
+Pegar este resumen en otros chats.
 
 ARCHIVOS (carpeta exam/ del repo)
 NUEVOS

@@ -11,7 +11,8 @@ def level_passed(
     speaking: float | None = None,
     listening: float | None = None,
 ) -> bool:
-    """speaking / listening = None significa que esa parte no se evaluó: se promedian solo las demás."""
+    """None en una parte significa que NO se evaluó (por ejemplo, la escucha no se pudo generar):
+    se promedian solo las demás, para no penalizar al estudiante por un fallo del sistema."""
     scores = [s for s in (reading, listening, writing, speaking) if s is not None]
     return all(s >= MIN_PER_PART for s in scores) and sum(scores) / len(scores) >= MIN_AVERAGE
 

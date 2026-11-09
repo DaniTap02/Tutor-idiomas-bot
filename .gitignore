@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 datos_bot.pkl
 ClaudeRespaldo
+audio_prueba/
+diagnostico_audio/

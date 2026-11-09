@@ -1,8 +1,9 @@
 =====================================================================
 RESUMEN: EXAMEN DE UBICACIÓN A2 (BOT DE TELEGRAM)
 =====================================================================
-Estado: examen A2 construido (lectura + escritura). Habla pendiente (prompts y
-checklist ya definidos). Falta B1 y B2. Pegar este resumen en otros chats.
+Estado: examen A2 construido y completo (lectura + escucha + escritura + habla).
+B1 construido. Falta B2. La escucha y el habla estan en exam/RESUMEN_AUDIO.txt.
+Pegar este resumen en otros chats.
 
 ARCHIVOS (carpeta exam/ del repo)
 NUEVOS

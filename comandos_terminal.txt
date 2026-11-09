@@ -1,12 +1,15 @@
-COMANDOS PARA PROBAR EL EXAMEN A1 (terminal de Visual Studio Code)
-==================================================================
+COMANDOS PARA PROBAR EL EXAMEN (terminal de Visual Studio Code)
+===============================================================
+Examen de nivel con cuatro partes: LECTURA -> ESCUCHA -> ESCRITURA -> HABLA.
+Niveles construidos: A1, A2 y B1 (falta B2).
+
 
 ANTES DE EMPEZAR
-- Copia los dos archivos nuevos a la carpeta exam/, reemplazando los anteriores:
-    question_generator.py
-    questions_a1.py
 - Abre la terminal en VS Code: menu Terminal > Nueva terminal (o Ctrl + Ñ).
   Debe abrirse en la carpeta Tutor-idiomas-bot. Si no, usa cd para entrar a ella.
+- La parte de ESCUCHA necesita internet (los audios los genera edge-tts).
+- La parte de HABLA funciona sin internet, pero la primera nota de voz descarga
+  el modelo de Whisper (unos 150 MB) y tarda mas que las siguientes.
 
 
 1) VERIFICAR QUE OLLAMA RESPONDE
@@ -23,10 +26,61 @@ Si da error de conexion, abre la aplicacion Ollama desde el menu de inicio.
 
 Debe aparecer (.venv) al inicio de la linea.
 
+La primera vez despues de bajar estos cambios hay que instalar lo nuevo
+(edge-tts y faster-whisper):
 
-3) PROBAR LAS PREGUNTAS Y EL CALIFICADOR (sin Telegram)
--------------------------------------------------------
+    pip install -r requirements.txt
+
+
+3) SI ALGO FALLA Y NO SABES POR QUE: EL DIAGNOSTICO
+---------------------------------------------------
+    python -m exam.diagnostico
+
+Prueba cada cosa por separado y dice la causa REAL:
+- Si estas dentro del entorno virtual y en la carpeta correcta.
+- Si estan instaladas todas las dependencias (y en que version).
+- Si el .env tiene el token (no lo imprime).
+- Si Ollama responde y si el modelo esta descargado.
+- Si el servicio de voz genera audio; si no, por que (red, reloj del PC,
+  el servicio, una dependencia...).
+- Si el modelo de Whisper esta descargado y si transcribe bien el audio que
+  acabo de generar (prueba las dos partes de punta a punta).
+
+Al final da una lista de "Que hacer". Los audios y el registro tecnico
+completo quedan en la carpeta diagnostico_audio/.
+
+Solo una parte:
+    python -m exam.diagnostico audio
+    python -m exam.diagnostico ollama
+
+
+4) PRUEBAS QUE NO NECESITAN NADA (ni Ollama, ni internet, ni Whisper)
+--------------------------------------------------------------------
+Son rapidas: simulan el modelo y Telegram. Empieza siempre por estas.
+
+    python -m exam.test_validacion
+    python -m exam.test_escucha_validacion
+    python -m exam.test_calificador
+    python -m exam.test_audio
+    python -m exam.test_flujo
+
+- test_validacion          : filtros y validacion de la LECTURA.
+- test_escucha_validacion  : filtros y validacion de la ESCUCHA.
+- test_calificador         : el calificador de escritura y habla (contracciones,
+                             sinonimos, respuestas a medias).
+- test_audio               : conversion a nota de voz, archivos danados y el
+                             motivo real de cada error (con audios de verdad).
+- test_flujo               : el examen completo simulado de punta a punta
+                             (botones, texto, nota de voz y casos raros).
+- Son 218 comprobaciones en total y tardan unos segundos.
+- Al final de cada una debe decir "0 con falla".
+
+
+5) PROBAR LAS PREGUNTAS Y EL CALIFICADOR (con Ollama, sin Telegram)
+-------------------------------------------------------------------
     python -m exam.test_a1
+    python -m exam.test_a2
+    python -m exam.test_b1
 
 - Imprime las 10 preguntas generadas con la correcta señalada con un check.
 - Luego califica los textos de ejemplo de escritura.
@@ -35,23 +89,107 @@ Debe aparecer (.venv) al inicio de la linea.
 - Revisa que no salgan caracteres raros (chino, etc.) ni preguntas muy dificiles.
 
 
-4) PROBAR EL BOT EN TELEGRAM
+6) PROBAR LA ESCUCHA Y ESCUCHAR LOS AUDIOS (con Ollama + internet)
+------------------------------------------------------------------
+    python -m exam.test_escucha            (A1 en ingles)
+    python -m exam.test_escucha A2 en
+    python -m exam.test_escucha B1 es      (otro nivel u otro idioma)
+
+- Imprime el texto hablado, la pregunta y las opciones de cada audio.
+- Guarda los .mp3 en la carpeta audio_prueba/ para que los escuches.
+- Al final dice cuantos se anularon y por que motivo.
+- Comprueba que el audio se entiende y que la respuesta se DICE claramente.
+
+
+7) VER QUE SE ESTA ANULANDO
+---------------------------
+    python -m exam.void_report              (todo)
+    python -m exam.void_report listening    (solo la escucha)
+
+Si un motivo se repite mucho, ahi esta el problema del generador.
+El motivo 'no_evidence' significa que la pregunta era ambigua: el modelo no
+pudo señalar nada escrito que descartara las otras opciones.
+Los motivos estan explicados dentro de exam/void_report.py.
+
+
+8) PROBAR EL BOT EN TELEGRAM
 ----------------------------
 Si el bot anterior sigue corriendo en otra terminal, paralo con Ctrl + C.
 
     python bot.py
 
 - Deja esa terminal abierta mientras pruebas.
-- En Telegram escribe /reiniciar y haz el examen.
+- En Telegram escribe /reiniciar y haz el examen completo.
+- En la parte de HABLA manten presionado el microfono para grabar la nota de voz.
 - Para apagar el bot: Ctrl + C.
+
+OJO: el bot no puede correr en dos computadores a la vez con el mismo token;
+Telegram da un error de conflicto. Apaga uno antes de encender el otro.
+
+
+9) SI EL PC VA MUY LENTO (ajustes temporales)
+---------------------------------------------
+En PowerShell, antes de correr el bot o las pruebas, en la MISMA terminal:
+
+    $env:EXAM_LISTENING_N="2"      # 2 audios de escucha en vez de 3
+    $env:WHISPER_MODEL="tiny"      # modelo de voz mas liviano (menos preciso)
+    $env:WHISPER_BEAM="1"          # transcribe mas rapido
+    $env:OLLAMA_TIMEOUT="180"      # mas paciencia con el modelo
+    $env:EXAM_EXIGIR_EVIDENCIA="0" # anula menos preguntas (pero deja pasar ambiguas)
+
+Para volver a lo normal, cierra esa terminal y abre una nueva.
+La lista completa de variables esta en el README.
 
 
 SI ALGO FALLA
 -------------
-- "No pude preparar el examen" / "No pude calificar tu texto":
+- "No pude conectar con Ollama":
   Ollama esta apagado. Repite el paso 1.
+
+- "Ollama responde, pero no logre generar suficientes preguntas validas":
+  El modelo va lento o los filtros anularon demasiadas. Corre el paso 6 para
+  ver los motivos y vuelve a intentar.
+
+- Un aviso al generar el audio de la escucha:
+  Ahora el bot dice el MOTIVO, y cada uno se arregla distinto:
+    "No pude conectarme al servicio de voz" -> red, proxy o firewall. El host
+       es speech.platform.bing.com, puerto 443.
+    "tardo demasiado en responder"          -> $env:TTS_TIMEOUT="90"
+    "suele ser la hora del computador"      -> sincroniza la hora de Windows
+    "no entrego el audio"                   -> pip install -U edge-tts
+    "se corto a mitad"                      -> conexion inestable, reintenta
+    "Telegram no lo acepto"                 -> el audio SI se genero; el
+       problema esta en el envio. Mira el registro de la terminal.
+  En todos los casos el examen sigue y muestra el texto escrito, y esa pregunta
+  no cuenta en el puntaje de escucha.
+
+- ModuleNotFoundError: faster_whisper  /  No module named 'edge_tts':
+  Falta instalar lo nuevo. Con el entorno activado:
+    pip install -r requirements.txt
+
+- Un aviso en la parte de habla:
+  Tambien dice el motivo:
+    "El audio llego vacio" / "No pude leer ese audio" -> vuelve a grabar la
+       nota de voz desde Telegram (manten presionado el microfono).
+    "Falta instalar faster-whisper"   -> pip install -r requirements.txt
+    "no esta descargado"              -> la primera vez hace falta internet.
+    "No hay memoria suficiente"       -> $env:WHISPER_MODEL="tiny"
+  Si el fallo es tecnico y se repite 3 veces, el nivel se cierra sin la parte
+  de habla para no dejarte atascado (no resta puntos).
+
+- Para cualquiera de los dos, corre el diagnostico del paso 3:
+    python -m exam.diagnostico audio
+
+- La primera nota de voz se queda en "Escuchando tu audio..." mucho rato:
+  Esta descargando el modelo de Whisper. Pasa una sola vez.
+
+- "No escuche voz en el audio" / "no entendi lo que dijiste":
+  Graba mas cerca del microfono, en un lugar silencioso. El examen no penaliza:
+  solo pide el audio otra vez.
+
 - ModuleNotFoundError: exam
   Ejecuta los comandos desde la carpeta que contiene exam/ y verifica que
   exista exam/__init__.py.
+
 - Error al activar el entorno (scripts deshabilitados), ejecuta una sola vez:
     Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
