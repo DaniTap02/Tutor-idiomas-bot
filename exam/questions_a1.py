@@ -7,6 +7,27 @@ N_READING = 10
 N_GRAMMAR = 6   # de las 10 preguntas, 6 de gramática...
 N_VOCAB = 4     # ...y 4 de vocabulario/conversación
 
+# Límites de largo. Más que el valor por defecto (14) porque los temas de CONTEXT_TOPICS llevan una
+# frase de contexto antes de la frase con el espacio en blanco, y 14 palabras no alcanzan:
+# "My brother is 10 and my sister is 15. My brother is ___ than my sister." son 16.
+MAX_QUESTION_WORDS = 20
+MAX_QUESTION_CHARS = 150
+
+# Temas cuya pregunta DEBE traer una frase de contexto antes de la frase con el espacio en blanco.
+# Sin contexto varias opciones son igual de válidas y la pregunta no tiene respuesta única:
+#   "My brother is ___ than my sister."  -> taller / younger / shorter
+#   "The book is ___ the table."         -> on / under / next to
+#   "___ book is mine."                  -> this / that
+# Se comparan con el INICIO del texto del tema.
+CONTEXT_TOPICS = (
+    "Pronouns:",
+    "Very common adjectives",
+    "Demonstratives",
+    "Prepositions of place",
+)
+# Temas con pronombres de género: el contexto debe mostrar el género (brother, sister, he, she...).
+GENDER_CUE_TOPICS = ("Pronouns:",)
+
 # Cada tema lleva entre paréntesis el ALCANCE permitido: así el modelo no se pasa a nivel A2/B1.
 GRAMMAR_TARGETS = [
     "Verb To Be (I am, you are, he/she/it is, we/they are): affirmative, negative, questions, short answers",

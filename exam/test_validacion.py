@@ -67,28 +67,66 @@ def modelo(system, user, temperature=0.1):
 qg._call_ollama = modelo
 q = "My brother is 10 and my sister is 15. My brother is ___ than my sister."
 opts = ["younger", "older", "more young"]
-modelo.respuesta = {"valid": [True, False, False], "context_enough": True, "level_ok": True, "tests_topic": True}
+
+
+def veredicto(**extra):
+    """Respuesta del modelo simulado. Por defecto, una pregunta correcta."""
+    base = {"valid": [True, False, False], "context_enough": True, "level_ok": True,
+            "tests_topic": True, "evidence": "my brother is 10 and my sister is 15"}
+    base.update(extra)
+    return base
+
+
+modelo.respuesta = veredicto()
 check("pregunta buena -> pasa", qg._validate(q, opts, 0, "en", "A2", T_COMP) is None)
 check("el modelo recibió 'My brother is younger than my sister.'", "My brother is younger than my sister." in vistos[-1])
 check("el modelo recibió 'more young' dentro de la oración", "My brother is more young than my sister." in vistos[-1])
 
-modelo.respuesta = {"valid": [True, True, True], "context_enough": True, "level_ok": True, "tests_topic": True}
+modelo.respuesta = veredicto(valid=[True, True, True])
 check("taller/younger/shorter válidas a la vez -> anulada (ambiguous)",
-      qg._validate("A ___ than B.", ["a", "b", "c"], 0, "en", "A2", "t") == "ambiguous")
-modelo.respuesta = {"valid": [False, True, False], "context_enough": True, "level_ok": True, "tests_topic": True}
+      qg._validate("Ana is ___ than Beatriz today.", ["aaa", "bbb", "ccc"], 0, "en", "A2", "t") == "ambiguous")
+modelo.respuesta = veredicto(valid=[False, True, False])
 check("la clave guardada no es válida -> anulada (key_invalid)",
-      qg._validate("A ___ than B.", ["a", "b", "c"], 0, "en", "A2", "t") == "key_invalid")
-modelo.respuesta = {"valid": [True, False, False], "context_enough": False, "level_ok": True, "tests_topic": True}
+      qg._validate("Ana is ___ than Beatriz today.", ["aaa", "bbb", "ccc"], 0, "en", "A2", "t") == "key_invalid")
+modelo.respuesta = veredicto(context_enough=False)
 check("contexto insuficiente según el modelo -> anulada (no_context)",
-      qg._validate("A ___ than B.", ["a", "b", "c"], 0, "en", "A2", "t") == "no_context")
-modelo.respuesta = {"valid": [True, False, False], "context_enough": True, "level_ok": False, "tests_topic": True}
+      qg._validate("Ana is ___ than Beatriz today.", ["aaa", "bbb", "ccc"], 0, "en", "A2", "t") == "no_context")
+modelo.respuesta = veredicto(level_ok=False)
 check("nivel inadecuado -> anulada (wrong_level)",
-      qg._validate("A ___ than B.", ["a", "b", "c"], 0, "en", "A2", "t") == "wrong_level")
-modelo.respuesta = {"valid": [True, False], "context_enough": True}
+      qg._validate("Ana is ___ than Beatriz today.", ["aaa", "bbb", "ccc"], 0, "en", "A2", "t") == "wrong_level")
+modelo.respuesta = {"valid": [True, False], "context_enough": True}  # mal formada a propósito
 check("respuesta mal formada -> anulada (verify_error)",
-      qg._validate("A ___ than B.", ["a", "b", "c"], 0, "en", "A2", "t") == "verify_error")
+      qg._validate("Ana is ___ than Beatriz today.", ["aaa", "bbb", "ccc"], 0, "en", "A2", "t") == "verify_error")
 
-print("\n3) Pipeline completo: lo defectuoso se anula, se registra y se genera otra")
+print("\n3) La EVIDENCIA: el modelo debe citar qué descarta las otras opciones")
+# Es el filtro más fuerte contra preguntas ambiguas: si no hay nada escrito que descarte las demás
+# opciones, el modelo no puede citar nada y la pregunta se anula. La cita se comprueba por CÓDIGO.
+Q_LIBRO = "It is a ___ book."
+OP_LIBRO = ["old", "new", "big"]
+Q_HERMANO = "My brother is 10 and my sister is 15. My brother is ___ than my sister."
+
+modelo.respuesta = veredicto(evidence="")
+check("'It is a ___ book' (old/new/big) sin evidencia -> anulada (no_evidence)",
+      qg._validate(Q_LIBRO, OP_LIBRO, 0, "en", "A1", "adjetivos") == "no_evidence")
+
+modelo.respuesta = veredicto(evidence="the book is from 1902 and the cover is torn")
+check("una evidencia INVENTADA (no está en la pregunta) -> anulada (no_evidence)",
+      qg._validate(Q_LIBRO, OP_LIBRO, 0, "en", "A1", "adjetivos") == "no_evidence")
+
+modelo.respuesta = veredicto(evidence="my brother is 10 and my sister is 15")
+check("con contexto real y evidencia citada -> pasa",
+      qg._validate(Q_HERMANO, ["younger", "older", "more young"], 0, "en", "A2", T_COMP) is None)
+
+check("una sola palabra no es evidencia suficiente",
+      qg._evidencia_ok("book", Q_LIBRO, OP_LIBRO) is False)
+check("una cita reordenada sigue valiendo (el modelo no copia literal)",
+      qg._evidencia_ok("sister is 15, brother is 10", Q_HERMANO, ["younger"]) is True)
+check("la evidencia puede estar en la opción correcta",
+      qg._evidencia_ok("brother younger", Q_HERMANO, ["younger", "older", "more young"]) is True)
+check("si el modelo no devuelve el campo -> anulada",
+      qg._evidencia_ok(None, Q_HERMANO, ["younger"]) is False)
+
+print("\n4) Pipeline completo: lo defectuoso se anula, se registra y se genera otra")
 guion = [
     {"q": "My brother is ___ than my sister.", "correct": "Taller", "wrong": ["Younger", "Shorter"]},
     {"q": "I have ___ short hair.", "correct": "Short", "wrong": ["Brown", "Long"]},
@@ -102,7 +140,8 @@ def modelo2(system, user, temperature=0.1):
     if "checking a multiple-choice question" in system:
         # simula un verificador razonable: solo la opción 'younger' es válida
         return {"valid": [("younger" in line) for line in user.splitlines() if line[:2] in ("0.", "1.", "2.")],
-                "context_enough": True, "level_ok": True, "tests_topic": True}
+                "context_enough": True, "level_ok": True, "tests_topic": True,
+                "evidence": "my brother is 10 and my sister is 15"}
     r = guion[min(estado["i"], len(guion) - 1)]
     estado["i"] += 1
     return r

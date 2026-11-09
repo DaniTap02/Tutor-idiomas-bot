@@ -19,9 +19,12 @@ from exam.telegram_flow import (
     elegir_idioma,
     en_examen,
     iniciar_examen,
+    repetir_audio,
+    responder_escucha,
     responder_lectura,
     texto_de_examen,
     tiene_nivel,
+    voz_de_examen,
 )
 
 load_dotenv()
@@ -218,6 +221,20 @@ async def responder(
         )
 
 
+async def recibir_voz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    """Notas de voz y audios: por ahora solo los usa la parte de habla del examen."""
+    if await voz_de_examen(update, context):
+        return
+
+    await update.message.reply_text(
+        "Gracias por el audio 🎤 Por ahora solo lo uso en la parte de habla "
+        "del examen de nivel.\n\nEscribe /practicar para seguir con los ejercicios."
+    )
+
+
 async def puntos(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
@@ -258,8 +275,14 @@ def main():
     app.add_handler(CommandHandler("puntos", puntos))
     app.add_handler(CallbackQueryHandler(elegir_idioma, pattern=r"^lang:"))
     app.add_handler(CallbackQueryHandler(responder_lectura, pattern=r"^ans:"))
+    app.add_handler(CallbackQueryHandler(responder_escucha, pattern=r"^lis:"))
+    app.add_handler(CallbackQueryHandler(repetir_audio, pattern=r"^rep:"))
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, responder)
+    )
+    # Notas de voz (parte de habla). Se acepta también un archivo de audio adjunto.
+    app.add_handler(
+        MessageHandler(filters.VOICE | filters.AUDIO, recibir_voz)
     )
 
     print("Tutor de Español iniciado. Presiona Ctrl+C para detenerlo.")

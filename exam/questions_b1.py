@@ -21,11 +21,26 @@ N_GRAMMAR = 5    # gramática (frase corta con un espacio en blanco)
 N_VOCAB = 2      # vocabulario (frase corta)
 N_PASSAGE = 3    # comprensión con MINI-TEXTO (los más lentos de generar: bájalo a 2 si tu PC sufre)
 
-# Límites de largo (frases cortas de gramática/vocabulario)
-MAX_QUESTION_WORDS = 20
+# Límites de largo (frases cortas de gramática/vocabulario).
+# 26 palabras, no 20: los temas de CONTEXT_TOPICS llevan una frase de contexto antes de la frase
+# con el espacio en blanco, y con 20 palabras el filtro las anulaba por largo.
+MAX_QUESTION_WORDS = 26
 MAX_OPTION_WORDS = 8
-MAX_QUESTION_CHARS = 150
+MAX_QUESTION_CHARS = 180
 MAX_OPTION_CHARS = 40
+
+# Temas cuya pregunta DEBE traer una frase de contexto. Sin contexto, varias opciones son igual de
+# válidas: "She is ___ than her sister" (taller/younger/shorter), "You ___ wear a helmet"
+# (must/should/have to), "It was raining, ___ we stayed at home" (so/and/because).
+# Se comparan con el INICIO del texto del tema.
+CONTEXT_TOPICS = (
+    "Past tenses:",
+    "Present simple vs present continuous",
+    "Modals of ability",
+    "Modals of obligation",
+    "Comparatives and superlatives",
+    "Linking words",
+)
 
 # Mini-textos: el filtro acepta 55-120 palabras; al modelo se le piden 60-110 (el margen es porque se pasa)
 PASSAGE_MIN_WORDS = 45

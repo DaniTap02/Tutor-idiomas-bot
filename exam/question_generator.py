@@ -57,6 +57,10 @@ MISSING_ALLOWED = 2   # si faltan 1 o 2 preguntas, el examen sigue con las que h
 WORKERS = int(os.getenv("EXAM_WORKERS", "1"))  # en paralelo ahogaba la RAM: 1 por defecto
 VOID_LOG = os.getenv("EXAM_VOID_LOG", "voided_questions.jsonl")  # registro de preguntas anuladas
 _LOG_LOCK = threading.Lock()
+# El modelo debe CITAR las palabras que hacen única la respuesta, y el código comprueba que esa cita
+# esté de verdad en la pregunta. Es el filtro más fuerte contra preguntas ambiguas, pero anula más
+# preguntas y por tanto genera más despacio: EXAM_EXIGIR_EVIDENCIA=0 lo desactiva.
+EXIGIR_EVIDENCIA = os.getenv("EXAM_EXIGIR_EVIDENCIA", "1") != "0"
 
 # Valor por defecto (A1). "may" no se incluye: es el mes.
 DEFAULT_FORBIDDEN_RE = re.compile(r"\b(will|would|could|should|must|might|been|being|going to)\b", re.I)
@@ -183,9 +187,14 @@ Answer these points:
    question to find the right answer.
 3. level_ok: false if the words or grammar are clearly too difficult for CEFR {level}.
 4. tests_topic: false if the question does not really test the topic above.
+5. evidence: COPY the exact words already written in the question (or in the text) that make ONE
+   option the only possible answer and rule the others out. Copy them, do not explain them and do
+   not invent them. If nothing written there rules the other options out, answer "" (empty string):
+   that means the question is ambiguous.
 
 Reply ONLY with JSON:
-{{"valid": [true or false, ...], "context_enough": true or false, "level_ok": true or false, "tests_topic": true or false}}"""
+{{"valid": [true or false, ...], "context_enough": true or false, "level_ok": true or false,
+  "tests_topic": true or false, "evidence": "..."}}"""
 
 
 def _is_true(v) -> bool:
@@ -194,6 +203,31 @@ def _is_true(v) -> bool:
 
 def _is_false(v) -> bool:
     return v is False or str(v).lower() == "false"
+
+
+_NO_PALABRA = re.compile(r"[^0-9a-záéíóúüñàèìòùâêîôûçäöß]+", re.I)
+
+
+def _palabras(texto: str) -> list[str]:
+    """Palabras con contenido (de 3 letras o más), en minúscula y sin signos."""
+    return [p for p in _NO_PALABRA.split((texto or "").lower()) if len(p) >= 3]
+
+
+def _evidencia_ok(evidencia, q: str, options: list[str], text: str | None = None) -> bool:
+    """La evidencia debe estar COPIADA de lo que el estudiante ve (pregunta, texto u opciones).
+
+    Es lo que convierte la validación en algo comprobable por código: si el modelo no puede señalar
+    palabras reales que descarten las otras opciones, la pregunta es ambigua. Se acepta una cita
+    aproximada (el modelo a veces reordena), pero no una inventada.
+    """
+    if not isinstance(evidencia, str):
+        return False
+    citadas = _palabras(evidencia)
+    if len(citadas) < 2:        # "" o una sola palabra no demuestra nada
+        return False
+    fuente = set(_palabras(" ".join([q, text or ""] + list(options))))
+    encontradas = sum(1 for p in citadas if p in fuente)
+    return encontradas / len(citadas) >= 0.6
 
 
 def _log_void(reason: str, topic: str, level: str, language: str, kind: str, q: str,
@@ -333,6 +367,8 @@ def _validate(q: str, options: list[str], answer: int, language: str, level: str
         return "wrong_level"
     if _is_false(verdict.get("tests_topic")):
         return "off_topic"
+    if EXIGIR_EVIDENCIA and not _evidencia_ok(verdict.get("evidence"), q, options, text):
+        return "no_evidence"   # no supo señalar qué descarta las otras opciones: es ambigua
     return None
 
 

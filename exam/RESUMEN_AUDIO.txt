@@ -1,0 +1,132 @@
+=====================================================================
+RESUMEN: PARTES DE ESCUCHA Y HABLA (BOT DE TELEGRAM)
+=====================================================================
+Estado: escucha y habla construidas en A1, A2 y B1, en ingles y espanol, y
+auditadas (errores por etapa con el motivo real, conversion a nota de voz,
+diagnostico). Falta el banco B2 (su configuracion de escucha ya esta lista).
+Pegar este resumen en otros chats.
+
+LO QUE CAMBIO EN LA AUDITORIA (importante)
+- Los avisos genericos "¿tienes internet?" y "revisa que faster-whisper este
+  instalado" ya NO existen: cada etapa falla con su MOTIVO real y su propio
+  mensaje. Solo el motivo "red" significa problema de conexion.
+- exam/registro.py: motivos, clasificacion de excepciones, registro con etapa y
+  tiempos, y tapado de tokens. exam/audio.py: sondeo de archivos y conversion a
+  OGG/OPUS con PyAV. exam/diagnostico.py: prueba cada componente por separado.
+- Telegram pide OGG/OPUS para sendVoice: el mp3 de edge-tts se convierte con
+  PyAV (no hace falta ffmpeg). Antes se enviaba el mp3 como nota de voz.
+- Las carpetas temporales se borran con ignore_cleanup_errors=True: en Windows
+  ese borrado puede fallar y antes se confundia con un fallo del audio.
+- Validacion de preguntas: el modelo debe CITAR las palabras que descartan las
+  otras opciones y el codigo comprueba la cita (motivo "no_evidence").
+  A1 y B1 ya tienen CONTEXT_TOPICS (antes solo A2).
+- grader.py juzga el significado: acepta contracciones, sinonimos y erratas
+  menores, y explica que falta en una respuesta a medias.
+
+ORDEN DE LAS PARTES DE CADA NIVEL
+  LECTURA (botones) -> ESCUCHA (audio + botones) -> ESCRITURA (texto) -> HABLA (nota de voz)
+
+ARCHIVOS (carpeta exam/ del repo)
+NUEVOS
+- exam/listening.py : genera y VALIDA los textos de escucha con Ollama.
+  CONFIG por nivel (A1, A2, B1 y B2 listo): n de audios, min/max palabras del
+  texto, largo de pregunta y opciones, velocidad de la voz (rate) y tipos de
+  texto hablado (targets). Reutiliza _format_problem, _log_void, _forbidden_re
+  y _forbidden_text de question_generator.py.
+- exam/tts.py : texto a voz con edge-tts (necesita internet). Respaldo con gTTS
+  si esta instalado. Genera .mp3, que Telegram acepta como nota de voz: NO
+  necesita ffmpeg. Variable TTS_TIMEOUT (40 s por defecto).
+- exam/stt.py : voz a texto con faster-whisper, en local y sin internet.
+  transcribe(ruta, idioma) devuelve texto + metricas: duration, speech, words,
+  wpm, confidence, no_speech. Variables WHISPER_MODEL (por defecto "base"),
+  WHISPER_DEVICE, WHISPER_COMPUTE, WHISPER_BEAM.
+- exam/test_escucha.py : prueba de la escucha con Ollama (guarda los .mp3 en
+  audio_prueba/ y lista los motivos de lo que se anulo).
+- exam/test_escucha_validacion.py : prueba de los filtros de escucha SIN Ollama.
+- exam/test_flujo.py : prueba del examen completo SIN Telegram, Ollama ni Whisper
+  (simula botones, texto y nota de voz; 51 comprobaciones).
+REEMPLAZAN
+- bot.py : registra responder_escucha ("lis:"), repetir_audio ("rep:") y un
+  manejador de filters.VOICE | filters.AUDIO.
+- exam/telegram_flow.py : partes de escucha y habla, repetir audio, revision
+  final de escucha, estado inicial unico (_estado_inicial) y botones A/B/C
+  compartidos por lectura y escucha (_opciones_y_filas).
+- exam/placement.py : level_passed(reading, writing, speaking, listening).
+  None en una parte = no se evaluo y NO se promedia.
+- exam/grader.py : parametro skill="writing"|"speaking" (mensajes en espanol
+  correctos para audio) y MIN_WORDS_SPEAKING (A1 8, A2 20, B1 40).
+- exam/void_report.py : motivos nuevos de escucha y desglose por parte del
+  examen. Filtrar con: python -m exam.void_report listening
+- requirements.txt : ahora en UTF-8 y con dependencias directas (agrega
+  edge-tts y faster-whisper).
+SIN CAMBIOS
+- exam/question_generator.py, exam/questions_a1.py, questions_a2.py,
+  questions_b1.py (ya traian SPEAKING_PROMPT y TASK_CHECKLIST["speaking"]).
+
+COMO SE VALIDA LA ESCUCHA (igual que la lectura, mas lo propio del audio)
+A) FILTROS DE CODIGO (no dependen del modelo)
+   - Los de la lectura: formato, 3 opciones distintas y cortas, solo alfabeto
+     latino, largo del texto, palabras prohibidas del nivel.
+   - Propios del audio (_audio_problem): nada que solo funcione ESCRITO.
+     Se anula por "not_speakable" si el texto trae parentesis, comillas dobles,
+     enlaces o correos, etiquetas de hablante ("Tom:") o formulas de carta
+     ("Dear ...", "Atentamente"). Se anula por "written_ref" si la pregunta
+     habla de "el texto" o pide leer (el estudiante solo escucha).
+     Una hora como 7:30 NO se confunde con una etiqueta de hablante.
+B) VERIFICACION CON EL MODELO (1 llamada, temperatura 0)
+   Motivos de anulacion: key_invalid (la clave no responde), ambiguous (mas de
+   una opcion valida), not_said (la respuesta no se dice en el audio),
+   hard_to_catch (no se capta oyendo una o dos veces), wrong_level (nivel
+   inadecuado), not_speakable (no suena a alguien hablando), verify_error.
+Lo anulado NUNCA se le muestra al estudiante y se registra en
+voided_questions.jsonl con kind="listening".
+
+DECISIONES IMPORTANTES
+- El idioma de Whisper se FUERZA al del examen. Adivinandolo, un acento marcado
+  hablando ingles se detectaba como otro idioma y se rechazaba una respuesta
+  correcta. Quien decide si hablo en el idioma pedido es el calificador
+  (grader.py, campo is_in_language), que juzga el CONTENIDO.
+- La parte de habla califica LO QUE SE DIJO, no la pronunciacion. La confianza
+  de la transcripcion solo se usa para pedir que grabe de nuevo cuando el audio
+  no se entiende. La comparacion fonetica sigue pendiente.
+- Si la escucha no se puede generar, el examen SIGUE sin ella y esa parte no se
+  promedia: nunca se penaliza al estudiante por un fallo del sistema.
+- Si no hay internet para un audio, se muestra el texto escrito para no frenar
+  el examen y queda anotado ("leido") en la revision final. Esa pregunta NO
+  cuenta en el puntaje de escucha: midio lectura, no escucha. Si ningun audio
+  sono, la escucha queda sin evaluar y no se promedia.
+- La revision de la escucha (con el texto de cada audio) se envia solo al FINAL
+  del nivel: antes seria hacer trampa.
+
+LIMITES Y FILTROS RAPIDOS DE LA NOTA DE VOZ (telegram_flow.py)
+- MIN_SEGUNDOS_VOZ: A1 12 s, A2 20 s, B1 30 s (B2 30 s).
+- MIN_CONFIANZA 0.35 : por debajo se pide grabar de nuevo (no se califica).
+- MAX_SIN_VOZ 0.60   : probabilidad de que no haya voz en el audio.
+- WPM_MUY_LENTO 40   : por debajo se sugiere hablar con menos pausas.
+- REPETICIONES_AUDIO 1 : cada audio de la escucha se puede repetir una vez.
+Ninguno de estos casos penaliza: se pide el audio otra vez sin contar intento.
+
+APROBAR UN NIVEL (placement.py)
+Cada parte evaluada >= 60 (MIN_PER_PART) y el promedio >= 70 (MIN_AVERAGE).
+
+COMANDOS DE PRUEBA
+  python -m exam.diagnostico                (que falla en ESTE pc y por que)
+  python -m exam.test_flujo                 (sin Ollama, sin internet)
+  python -m exam.test_audio                 (audio real, sin internet)
+  python -m exam.test_escucha_validacion    (sin Ollama)
+  python -m exam.test_calificador           (sin Ollama)
+  python -m exam.test_escucha               (A1 ingles; con Ollama + internet)
+  python -m exam.test_escucha B1 es         (otro nivel u otro idioma)
+  python -m exam.void_report listening      (que se esta anulando en la escucha)
+Las cinco pruebas sin dependencias externas suman 218 comprobaciones.
+
+VARIABLES DE ENTORNO NUEVAS
+  TTS_INTENTOS            reintentos con edge-tts antes del respaldo (3)
+  TTS_NOTA_VOZ            "0" para no convertir a OGG/OPUS (envia mp3)
+  EXAM_EXIGIR_EVIDENCIA   "0" desactiva la exigencia de evidencia (mas rapido,
+                          pero deja pasar preguntas ambiguas)
+
+PARA AGREGAR B2
+1. Crear exam/questions_b2.py con el formato de questions_b1.py.
+2. Registrarlo en BANCOS, en exam/telegram_flow.py.
+3. Su configuracion de escucha YA esta en CONFIG, en exam/listening.py.

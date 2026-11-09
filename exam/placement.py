@@ -1,13 +1,19 @@
 """Lógica de ubicación: el examen se detiene en el primer nivel que NO se pasa."""
 
 LEVELS = ["A1", "A2", "B1", "B2"]
-MIN_PER_PART = 60   # cada parte (lectura, escritura, habla) debe sacar al menos esto
-MIN_AVERAGE = 70    # y el promedio de las tres partes al menos esto
+MIN_PER_PART = 60   # cada parte (lectura, escucha, escritura, habla) debe sacar al menos esto
+MIN_AVERAGE = 70    # y el promedio de las partes evaluadas al menos esto
 
 
-def level_passed(reading: float, writing: float, speaking: float | None = None) -> bool:
-    """speaking=None significa que la parte de habla aún no se evalúa: se promedian solo las demás."""
-    scores = [s for s in (reading, writing, speaking) if s is not None]
+def level_passed(
+    reading: float,
+    writing: float,
+    speaking: float | None = None,
+    listening: float | None = None,
+) -> bool:
+    """None en una parte significa que NO se evaluó (por ejemplo, la escucha no se pudo generar):
+    se promedian solo las demás, para no penalizar al estudiante por un fallo del sistema."""
+    scores = [s for s in (reading, listening, writing, speaking) if s is not None]
     return all(s >= MIN_PER_PART for s in scores) and sum(scores) / len(scores) >= MIN_AVERAGE
 
 
