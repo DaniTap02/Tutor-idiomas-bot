@@ -63,8 +63,9 @@ Son rapidas: simulan el modelo y Telegram. Empieza siempre por estas.
     python -m exam.test_calificador
     python -m exam.test_audio
     python -m exam.test_flujo
+    python -m exam.test_espanol
 
-- test_validacion          : filtros y validacion de la LECTURA.
+- test_validacion         : filtros y validacion de la LECTURA.
 - test_escucha_validacion  : filtros y validacion de la ESCUCHA.
 - test_calificador         : el calificador de escritura y habla (contracciones,
                              sinonimos, respuestas a medias).
@@ -72,7 +73,8 @@ Son rapidas: simulan el modelo y Telegram. Empieza siempre por estas.
                              motivo real de cada error (con audios de verdad).
 - test_flujo               : el examen completo simulado de punta a punta
                              (botones, texto, nota de voz y casos raros).
-- Son 218 comprobaciones en total y tardan unos segundos.
+- test_espanol             : filtros, bancos y calificador del examen en ESPAÑOL.
+- Son 328 comprobaciones en total y tardan unos segundos.
 - Al final de cada una debe decir "0 con falla".
 
 
@@ -81,6 +83,8 @@ Son rapidas: simulan el modelo y Telegram. Empieza siempre por estas.
     python -m exam.test_a1
     python -m exam.test_a2
     python -m exam.test_b1
+    python -m exam.test_es A1            (examen en español: A1, A2 o B1)
+    python -m exam.test_es B1 escucha    (también genera los textos de escucha)
 
 - Imprime las 10 preguntas generadas con la correcta señalada con un check.
 - Luego califica los textos de ejemplo de escritura.

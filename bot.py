@@ -127,7 +127,8 @@ async def help_command(
         "/start - Iniciar\n"
         "/practicar - Resolver una pregunta\n"
         "/siguiente - Obtener otra pregunta\n"
-        "/puntos - Ver tus resultados\n\n"
+        "/puntos - Ver tus resultados\n"
+        "/reiniciar - Repetir el examen de nivel\n\n"
         "Lee la pregunta, escribe tu respuesta y "
         "recibirás una explicación."
     )
@@ -210,7 +211,7 @@ async def responder(
 
     if texto in {"hola", "buenas", "buenos dias", "buenas tardes"}:
         await update.message.reply_text(
-            "¡Hola! 😊 ¿Lista para aprender español?\n"
+            "¡Hola! 😊 ¿Te animas a practicar español?\n"
             "Escribe /practicar para comenzar."
         )
     else:
@@ -285,7 +286,7 @@ def main():
         MessageHandler(filters.VOICE | filters.AUDIO, recibir_voz)
     )
 
-    print("Tutor de Español iniciado. Presiona Ctrl+C para detenerlo.")
+    print("Tutor de idiomas iniciado. Presiona Ctrl+C para detenerlo.")
     app.run_polling()
 
 

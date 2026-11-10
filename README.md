@@ -235,7 +235,7 @@ Luego abre tu bot en Telegram y escribe `/start`. El bot usa *long polling*, por
 
 ## Pruebas
 
-Cinco pruebas **no necesitan internet, ni Ollama, ni el modelo de Whisper**: simulan el modelo y Telegram, y `test_audio` trabaja con archivos de audio reales que crea PyAV. Son 218 comprobaciones y tardan unos segundos.
+Seis pruebas **no necesitan internet, ni Ollama, ni el modelo de Whisper**: simulan el modelo y Telegram, y `test_audio` trabaja con archivos de audio reales que crea PyAV. Son 328 comprobaciones y tardan unos segundos.
 
 ```bash
 python -m exam.test_validacion            # filtros y validación de la LECTURA
@@ -243,6 +243,7 @@ python -m exam.test_escucha_validacion    # filtros y validación de la ESCUCHA
 python -m exam.test_calificador           # el calificador de escritura y habla
 python -m exam.test_audio                 # conversión, sondeo y motivos de error del audio
 python -m exam.test_flujo                 # el examen completo simulado de punta a punta
+python -m exam.test_espanol               # filtros, bancos y calificador del examen en ESPAÑOL
 ```
 
 Las demás sí usan Ollama (y la de escucha, internet para el audio):
@@ -251,6 +252,8 @@ Las demás sí usan Ollama (y la de escucha, internet para el audio):
 python -m exam.test_a1                    # preguntas y calificador de A1
 python -m exam.test_a2
 python -m exam.test_b1
+python -m exam.test_es A1                 # preguntas y calificador del examen en español (A1, A2 o B1)
+python -m exam.test_es B1 escucha         # también genera los textos de escucha
 python -m exam.test_escucha               # escucha A1 en inglés
 python -m exam.test_escucha B1 es         # otro nivel u otro idioma
 ```
@@ -276,19 +279,23 @@ Tutor-idiomas-bot/
 │   ├── questions_a1.py             # Banco A1: temas, prohibidos, consignas y checklists
 │   ├── questions_a2.py             # Banco A2
 │   ├── questions_b1.py             # Banco B1 (varias tareas de escritura, temas propios en español)
+│   ├── espanol.py                  # Formas verbales prohibidas por nivel para el examen en español
 │   ├── void_report.py              # Resumen de las preguntas anuladas
 │   ├── test_validacion.py          # Pruebas de la lectura (sin Ollama)
 │   ├── test_escucha_validacion.py  # Pruebas de la escucha (sin Ollama)
 │   ├── test_calificador.py         # Pruebas del calificador (sin Ollama)
 │   ├── test_audio.py               # Pruebas del audio con archivos reales (sin internet)
 │   ├── test_flujo.py               # Prueba del examen completo (sin Telegram ni Ollama)
-│   ├── test_a1.py / test_a2.py / test_b1.py   # Pruebas con Ollama
+│   ├── test_espanol.py             # Pruebas del examen en español (sin Ollama)
+│   ├── test_a1.py / test_a2.py / test_b1.py   # Pruebas con Ollama (inglés)
+│   ├── test_es.py                  # Prueba del examen en español con Ollama
 │   ├── test_escucha.py             # Prueba de la escucha con audios reales
 │   ├── RESUMEN_A2.txt / B1.txt     # Alcance de cada nivel, en texto
+│   ├── RESUMEN_ES.txt              # Alcance y controles del examen en español
 │   └── RESUMEN_AUDIO.txt           # Cómo quedaron la escucha y el habla
 ├── requirements.txt
 ├── comandos_terminal.txt           # Guía de comandos paso a paso
-├── voided_questions.jsonl          # Registro de preguntas anuladas (se va llenando solo)
+├── voided_questions.jsonl          # Registro local de preguntas anuladas (no se versiona)
 ├── .env                            # Token de Telegram (no se versiona)
 └── README.md
 ```
