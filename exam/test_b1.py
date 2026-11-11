@@ -131,6 +131,13 @@ def probar_filtros():
         fallos += not ok
         print(f"  {'OK ' if ok else 'MAL'} {'rechaza' if rechazada else 'acepta '} | {frase}")
     print("Filtro:", "todo bien ✅" if not fallos else f"{fallos} casos mal ❌")
+    return fallos
+
+
+def test_filtro_b1():
+    """pytest: el filtro de palabras prohibidas de B1 (sin Ollama). Lectura y escritura usan Ollama
+    de verdad: se prueban a mano con python -m exam.test_b1 lectura / escritura."""
+    assert probar_filtros() == 0
 
 
 def probar_lectura(language: str):

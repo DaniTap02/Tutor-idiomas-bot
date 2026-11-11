@@ -32,5 +32,8 @@ faster-whisper==1.2.1
 # El proyecto decodifica el audio por su cuenta, asi que tambien funciona con versiones nuevas.
 av>=14,<19
 
+# --- Pruebas: python -m pytest (todas sin Telegram, sin internet, sin Ollama y sin Lara) ---
+pytest==9.1.1
+
 # --- Opcional: respaldo del texto a voz si edge-tts falla ---
 # gTTS==2.5.4

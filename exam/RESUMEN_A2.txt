@@ -45,7 +45,7 @@ telegram_flow.py
 ESCRITURA A2
 - Mensaje a un amigo (25-35 palabras) sobre el último fin de semana/vacaciones.
 - Requisitos: a dónde fue, qué hizo (pasado), qué comió/vio, algo que le gustó.
-HABLA A2 (pendiente de implementar)
+HABLA A2 (nota de voz: Whisper en local + calificador)
 - Rutina diaria + qué va a hacer este fin de semana (going to). 3 requisitos.
 
 PRUEBAS

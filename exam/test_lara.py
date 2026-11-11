@@ -227,6 +227,20 @@ async def casos():
     check("/traducir con Lara caída: dice que no está disponible", m.enviados[-1] == traduccion.NO_DISPONIBLE)
     await c.cerrar()
 
+    # Deja todo como estaba: con pytest, las demás pruebas corren en el mismo proceso
+    os.environ.pop("LARA_ACCESS_KEY_ID", None)
+    os.environ.pop("LARA_ACCESS_KEY_SECRET", None)
+    lara_mod.cliente = ClienteLara()
+
 
 asyncio.run(casos())
 print(f"\nResultado: {ok_total} OK, {fail_total} con falla")
+
+
+def test_sin_fallas():
+    """pytest: todas las comprobaciones de este archivo pasaron (se ejecutan al importarlo)."""
+    assert fail_total == 0, f"{fail_total} comprobaciones con falla (mira la salida con: pytest -s)"
+
+
+if __name__ == "__main__":
+    raise SystemExit(1 if fail_total else 0)

@@ -689,8 +689,13 @@ async def main():
     await caso_mensajes_fuera_de_lugar()
     await caso_opciones_largas()
     print(f"\nResultado: {ok_total} OK, {fail_total} con falla")
-    raise SystemExit(1 if fail_total else 0)
+    return fail_total
+
+
+def test_flujo_del_examen():
+    """pytest: el examen completo simulado (sin Telegram, Ollama ni Whisper)."""
+    assert asyncio.run(main()) == 0, "hay comprobaciones con falla (mira la salida con: pytest -s)"
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    raise SystemExit(1 if asyncio.run(main()) else 0)

@@ -69,7 +69,7 @@ LECTURA B1
 ESCRITURA B1 (80-100 palabras, mínimo 50 para calificar)
 - El código elige al azar UNA tarea: correo informal (4 requisitos), relato que
   empieza con una frase dada (3), opinión sobre redes sociales (3).
-HABLA B1 (pendiente de implementar)
+HABLA B1 (nota de voz: Whisper en local + calificador)
 - Contar una experiencia pasada memorable y dar opinión (45-60 s). 3 requisitos.
 
 PRUEBAS

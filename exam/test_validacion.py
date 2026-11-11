@@ -156,4 +156,12 @@ check("quedaron 2 preguntas anuladas en el registro", len(filas) == 2)
 check("motivos registrados: no_context y redundant", sorted(f["reason"] for f in filas) == ["no_context", "redundant"])
 
 print(f"\nResultado: {ok_total} OK, {fail_total} con falla")
-raise SystemExit(1 if fail_total else 0)
+
+
+def test_sin_fallas():
+    """pytest: todas las comprobaciones de este archivo pasaron (se ejecutan al importarlo)."""
+    assert fail_total == 0, f"{fail_total} comprobaciones con falla (mira la salida con: pytest -s)"
+
+
+if __name__ == "__main__":
+    raise SystemExit(1 if fail_total else 0)

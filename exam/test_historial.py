@@ -174,3 +174,12 @@ check("sin datos: las métricas dicen 'sin datos' en vez de fallar", vacia["erro
       and vacia["retorno"]["porcentaje"] is None and vacia["anuladas"]["total"] == 0)
 
 print(f"\nResultado: {ok_total} OK, {fail_total} con falla")
+
+
+def test_sin_fallas():
+    """pytest: todas las comprobaciones de este archivo pasaron (se ejecutan al importarlo)."""
+    assert fail_total == 0, f"{fail_total} comprobaciones con falla (mira la salida con: pytest -s)"
+
+
+if __name__ == "__main__":
+    raise SystemExit(1 if fail_total else 0)

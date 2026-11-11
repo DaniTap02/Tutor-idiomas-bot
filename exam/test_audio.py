@@ -253,4 +253,12 @@ check("todos los motivos usados están documentados",
            "dependencia", "modelo_descarga", "modelo_carga", "memoria", "transcripcion", "sin_voz")))
 
 print(f"\nResultado: {ok_total} OK, {fail_total} con falla")
-raise SystemExit(1 if fail_total else 0)
+
+
+def test_sin_fallas():
+    """pytest: todas las comprobaciones de este archivo pasaron (se ejecutan al importarlo)."""
+    assert fail_total == 0, f"{fail_total} comprobaciones con falla (mira la salida con: pytest -s)"
+
+
+if __name__ == "__main__":
+    raise SystemExit(1 if fail_total else 0)

@@ -75,6 +75,12 @@ def probar_filtros():
           and not level_passed(90, 55, 90, 90))
 
 
+def test_filtros_b2():
+    """pytest: filtros y configuración de B2 (sin Ollama)."""
+    probar_filtros()
+    assert fail_total == 0, f"{fail_total} comprobaciones con falla"
+
+
 def probar_lectura(language: str):
     print(f"\n== Lectura B2 ({language}) con Ollama")
     inicio = time.time()

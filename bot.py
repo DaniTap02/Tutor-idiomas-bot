@@ -31,6 +31,7 @@ from exam.telegram_flow import (  # noqa: E402
     tiene_nivel,
     voz_de_examen,
 )
+from exam.recordatorios import boton_seguir, comando_recordatorio, programar_todos  # noqa: E402
 from exam.traduccion import comando_traducir, ver_traduccion  # noqa: E402
 from exam.tutor import (  # noqa: E402
     comando_idioma,
@@ -61,6 +62,7 @@ COMANDOS = (
     "/puntos - Tu progreso acumulado (no se borra con /reiniciar)\n"
     "/idioma - Cambiar de idioma (inglés o español)\n"
     "/traducir <texto> - Traducir una palabra o frase\n"
+    "/recordatorio HH:MM - Recordatorio diario (hora de Colombia); /recordatorio off lo apaga\n"
     "/reiniciar - Repetir el examen de nivel\n"
     "/help - Ver la ayuda"
 )
@@ -210,6 +212,8 @@ async def anotar_usuario(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def al_iniciar(app: Application):
     """Abre UNA sesión con el servidor MCP de Lara para toda la vida del bot (si está configurado)."""
+    n = programar_todos(app)   # los recordatorios guardados en SQLite sobreviven al reinicio
+    print(f"Recordatorios programados: {n}")
     lara.cliente.al_usar = historial.registrar_uso_lara   # uso de las 2 herramientas de Lara
     if await lara.iniciar():
         print("Lara Translate (MCP) conectado.")
@@ -250,6 +254,8 @@ def main():
     app.add_handler(CommandHandler("idioma", comando_idioma))
     app.add_handler(CommandHandler("puntos", puntos))
     app.add_handler(CommandHandler("traducir", comando_traducir))
+    app.add_handler(CommandHandler("recordatorio", comando_recordatorio))
+    app.add_handler(CallbackQueryHandler(boton_seguir, pattern=r"^recl:"))
     app.add_handler(CallbackQueryHandler(elegir_idioma, pattern=r"^lang:"))
     app.add_handler(CallbackQueryHandler(responder_lectura, pattern=r"^ans:"))
     app.add_handler(CallbackQueryHandler(responder_escucha, pattern=r"^lis:"))

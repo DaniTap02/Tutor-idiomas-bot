@@ -1,7 +1,8 @@
-COMANDOS PARA PROBAR EL EXAMEN (terminal de Visual Studio Code)
-===============================================================
+COMANDOS PARA PROBAR EL BOT (terminal de Visual Studio Code)
+============================================================
 Examen de nivel con cuatro partes: LECTURA -> ESCUCHA -> ESCRITURA -> HABLA.
-Niveles construidos: A1, A2 y B1 (falta B2).
+Niveles: A1, A2, B1 y B2, en ingles y español. Despues del examen: lecciones,
+practica, traduccion con Lara (MCP), historial en SQLite y recordatorios.
 
 
 ANTES DE EMPEZAR
@@ -27,9 +28,15 @@ Si da error de conexion, abre la aplicacion Ollama desde el menu de inicio.
 Debe aparecer (.venv) al inicio de la linea.
 
 La primera vez despues de bajar estos cambios hay que instalar lo nuevo
-(edge-tts y faster-whisper):
+(mcp, pytest, la JobQueue de python-telegram-bot y tzdata):
 
     pip install -r requirements.txt
+
+Para la traduccion con Lara (opcional): instala Node.js 22.23.4 o superior
+(https://nodejs.org, version LTS) y pon LARA_ACCESS_KEY_ID y
+LARA_ACCESS_KEY_SECRET en el .env (mira .env.example). Comprueba con:
+
+    node --version
 
 
 3) SI ALGO FALLA Y NO SABES POR QUE: EL DIAGNOSTICO
@@ -56,26 +63,28 @@ Solo una parte:
 
 4) PRUEBAS QUE NO NECESITAN NADA (ni Ollama, ni internet, ni Whisper)
 --------------------------------------------------------------------
-Son rapidas: simulan el modelo y Telegram. Empieza siempre por estas.
+Son rapidas: simulan el modelo, Telegram y Lara. Empieza siempre por estas.
+Todas juntas, con pytest:
 
-    python -m exam.test_validacion
-    python -m exam.test_escucha_validacion
-    python -m exam.test_calificador
-    python -m exam.test_audio
-    python -m exam.test_flujo
-    python -m exam.test_espanol
+    python -m pytest
 
-- test_validacion         : filtros y validacion de la LECTURA.
-- test_escucha_validacion  : filtros y validacion de la ESCUCHA.
-- test_calificador         : el calificador de escritura y habla (contracciones,
-                             sinonimos, respuestas a medias).
-- test_audio               : conversion a nota de voz, archivos danados y el
-                             motivo real de cada error (con audios de verdad).
-- test_flujo               : el examen completo simulado de punta a punta
-                             (botones, texto, nota de voz y casos raros).
-- test_espanol             : filtros, bancos y calificador del examen en ESPAÑOL.
-- Son 328 comprobaciones en total y tardan unos segundos.
-- Al final de cada una debe decir "0 con falla".
+Debe terminar con "passed" y ningun "failed". Para ver el detalle: python -m pytest -s
+
+Una por una (al final de cada una debe decir "0 con falla"):
+
+    python -m exam.test_validacion          filtros y validacion de la LECTURA
+    python -m exam.test_escucha_validacion  filtros y validacion de la ESCUCHA
+    python -m exam.test_calificador         el calificador de escritura y habla
+    python -m exam.test_audio               conversion de audio y motivos de error
+    python -m exam.test_flujo               el examen completo simulado (A1 -> B2)
+    python -m exam.test_espanol             el examen en ESPAÑOL
+    python -m exam.test_niveles_simulados   los 4 niveles y las 40 lecciones (Ollama simulado)
+    python -m exam.test_tutor               lecciones, adaptacion, /practicar, /idioma
+    python -m exam.test_lara                cliente MCP de Lara (sin internet)
+    python -m exam.test_historial           SQLite, /puntos y metricas
+    python -m exam.test_recordatorios       /recordatorio con la JobQueue
+    python -m exam.test_b1 filtros          palabras prohibidas de B1
+    python -m exam.test_b2 filtros          palabras prohibidas y configuracion de B2
 
 
 5) PROBAR LAS PREGUNTAS Y EL CALIFICADOR (con Ollama, sin Telegram)
@@ -83,7 +92,9 @@ Son rapidas: simulan el modelo y Telegram. Empieza siempre por estas.
     python -m exam.test_a1
     python -m exam.test_a2
     python -m exam.test_b1
-    python -m exam.test_es A1            (examen en español: A1, A2 o B1)
+    python -m exam.test_b2 lectura       (B2: el nivel mas exigente para el modelo)
+    python -m exam.test_b2 escritura
+    python -m exam.test_es A1            (examen en español: A1, A2, B1 o B2)
     python -m exam.test_es B1 escucha    (también genera los textos de escucha)
 
 - Imprime las 10 preguntas generadas con la correcta señalada con un check.
@@ -116,15 +127,31 @@ pudo señalar nada escrito que descartara las otras opciones.
 Los motivos estan explicados dentro de exam/void_report.py.
 
 
+7b) PROBAR LARA (MCP) DE VERDAD (Node.js + credenciales + internet)
+-------------------------------------------------------------------
+    python -m mcp_cliente.probar_lara
+
+- Lista las 22 herramientas del servidor y prueba detect_language y translate.
+- La primera vez npx descarga el servidor y tarda mas.
+
+
+7c) VER LAS METRICAS (historial.db)
+-----------------------------------
+    python -m exam.metricas
+
+
 8) PROBAR EL BOT EN TELEGRAM
 ----------------------------
 Si el bot anterior sigue corriendo en otra terminal, paralo con Ctrl + C.
 
     python bot.py
 
+- Al arrancar dice si Lara quedo conectada y cuantos recordatorios programo.
 - Deja esa terminal abierta mientras pruebas.
 - En Telegram escribe /reiniciar y haz el examen completo.
 - En la parte de HABLA manten presionado el microfono para grabar la nota de voz.
+- Despues: /leccion, /practicar, /nivel, /puntos, /idioma,
+  /traducir I would like a coffee, /recordatorio 19:30 y /recordatorio off.
 - Para apagar el bot: Ctrl + C.
 
 OJO: el bot no puede correr en dos computadores a la vez con el mismo token;

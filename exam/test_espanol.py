@@ -216,4 +216,12 @@ check("B1 escritura en español: consigna en español", "redes sociales" in prom
 check("B1 escritura: el checklist acepta conectores en español", "porque" in lista_b1[2]["label_es"])
 
 print(f"\nResultado: {ok_total} OK, {fail_total} con falla")
-raise SystemExit(1 if fail_total else 0)
+
+
+def test_sin_fallas():
+    """pytest: todas las comprobaciones de este archivo pasaron (se ejecutan al importarlo)."""
+    assert fail_total == 0, f"{fail_total} comprobaciones con falla (mira la salida con: pytest -s)"
+
+
+if __name__ == "__main__":
+    raise SystemExit(1 if fail_total else 0)

@@ -1,4 +1,4 @@
-EXAMEN EN ESPAÑOL (A1, A2, B1)
+EXAMEN EN ESPAÑOL (A1, A2, B1, B2)
 ==============================
 
 Mismo motor y mismo flujo que el de inglés: LECTURA (10 preguntas generadas por Ollama y validadas)
@@ -65,9 +65,9 @@ CÓMO PROBARLO
     python -m exam.void_report           (por qué se anularon preguntas; filtra por "language": "es")
 
 
-PENDIENTE: B2 EN ESPAÑOL
-------------------------
-Se hará junto con el banco B2 de inglés (questions_b2.py, en su propio formato). Alcance del temario:
+B2 EN ESPAÑOL (hecho: exam/questions_b2.py, junto con el B2 de inglés)
+------------------------------------------------------------------------
+Alcance del temario:
   Gramática: imperfecto de subjuntivo y correlación de tiempos (si tuviera dinero, compraría...),
   concesivas (aunque llueva, por más que estudie), relativas con subjuntivo (busco un trabajo que
   tenga...), discurso indirecto con cambio de tiempos (dijo que vendría), ser/estar con cambio de
@@ -75,4 +75,6 @@ Se hará junto con el banco B2 de inglés (questions_b2.py, en su propio formato
   Vocabulario: temas abstractos (política, medio ambiente, ciencia, arte, economía), modismos
   (tomar el pelo, costar un ojo de la cara), matizar opiniones, redacción formal (reclamaciones,
   cartas formales, ensayos).
-  Para B2 en español el FORBIDDEN_RE_ES puede quedar vacío o muy permisivo.
+  En B2 FORBIDDEN_RE_ES = None: no hay filtro de formas por código; lo de C1 lo controla el prompt.
+    python -m exam.test_es B2            (con Ollama)
+    python -m exam.test_b2 filtros       (sin Ollama)

@@ -160,7 +160,7 @@ FORBIDDEN_RE = re.compile(
 )
 
 # ---------- Temas para el examen en ESPAÑOL ----------
-# Alcance de exam/RESUMEN_ES.txt (sección "PENDIENTE: B2 EN ESPAÑOL").
+# Alcance de exam/RESUMEN_ES.txt (sección "B2 EN ESPAÑOL").
 GRAMMAR_TARGETS_ES = [
     "Imperfecto de subjuntivo y correlación de tiempos en condicionales (Si tuviera dinero, viajaría; Si fuera tú, lo aceptaría)",
     "Condicional compuesto y pluscuamperfecto de subjuntivo para hechos pasados no reales (Si hubiera estudiado, habría aprobado)",

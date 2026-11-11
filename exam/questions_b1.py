@@ -323,7 +323,7 @@ WRITING_TASKS = [
 # recibe la primera tarea. telegram_flow usa WRITING_TASKS cuando existe.
 WRITING_PROMPT = WRITING_TASKS[0]["prompt"]
 
-# ---------- Habla (pendiente de implementar: la transcripción aún no está) ----------
+# ---------- Habla (nota de voz: se transcribe con exam/stt.py y la califica grader.py) ----------
 SPEAKING_PROMPT = {
     "en": (
         "Send a voice note (45 to 60 seconds): tell us about a memorable experience in the past, such as "

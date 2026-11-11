@@ -153,7 +153,7 @@ def _nivel(context: ContextTypes.DEFAULT_TYPE) -> dict | None:
 
 
 def banco_de(level: str):
-    """Banco del nivel. Si todavía no existe (B2 provisional), se usa el más alto que haya."""
+    """Banco del nivel (A1-B2). Si llegara un nivel sin banco, se usa el más alto que haya."""
     if level in BANCOS:
         return BANCOS[level]
     return BANCOS[sorted(BANCOS)[-1]]

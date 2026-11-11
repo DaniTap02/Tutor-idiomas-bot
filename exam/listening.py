@@ -167,7 +167,7 @@ CONFIG = {
             "a person giving an opinion about a film, a restaurant or a place and explaining why",
         ],
     },
-    # Listo para cuando se construya el banco B2 (todavía no está en BANCOS de telegram_flow).
+    # B2: la usa el banco exam/questions_b2.py (último nivel del semestre).
     "B2": {
         "n": 3,
         "min_words": 70,

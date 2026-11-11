@@ -815,7 +815,7 @@ async def _cerrar_nivel(message, context: ContextTypes.DEFAULT_TYPE):
     if siguiente["action"] == "teach":
         mensaje = f"Empezarás aprendiendo desde el nivel {siguiente['level']}. ¡Vamos paso a paso! 📚"
     elif siguiente["action"] == "exam":
-        # Pasó, pero el examen del siguiente nivel todavía no está construido
+        # Pasó, pero el siguiente nivel no tiene banco (hoy no pasa: A1-B2 están en BANCOS)
         provisional = True
         mensaje = (
             f"✅ ¡Pasaste {nivel_rendido}! El examen de {siguiente['level']} aún está en construcción, "
