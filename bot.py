@@ -1,11 +1,13 @@
 import os
 import logging
-import random
-import unicodedata
 
 from dotenv import load_dotenv
-from telegram import Update
-from telegram.ext import (
+
+# Antes de importar el resto: varios módulos leen sus variables (OLLAMA_*, LARA_*...) al importarse
+load_dotenv()
+
+from telegram import Update  # noqa: E402
+from telegram.ext import (  # noqa: E402
     Application,
     CallbackQueryHandler,
     CommandHandler,
@@ -15,7 +17,7 @@ from telegram.ext import (
     filters,
 )
 
-from exam.telegram_flow import (
+from exam.telegram_flow import (  # noqa: E402
     elegir_idioma,
     en_examen,
     iniciar_examen,
@@ -26,60 +28,39 @@ from exam.telegram_flow import (
     tiene_nivel,
     voz_de_examen,
 )
-from exam.traduccion import comando_traducir, ver_traduccion
-from mcp_cliente import lara
+from exam.traduccion import comando_traducir, ver_traduccion  # noqa: E402
+from exam.tutor import (  # noqa: E402
+    comando_idioma,
+    comando_nivel,
+    elegir_idioma_tutor,
+    leccion,
+    practicar,
+    responder_ejercicio,
+    responder_repaso,
+    texto_de_leccion,
+)
+from mcp_cliente import lara  # noqa: E402
 
-load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
+# httpx registra cada petición (incluida la URL de Telegram, que lleva el token): solo avisos
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# Ejercicios iniciales de español
-EJERCICIOS = [
-    {
-        "pregunta": "¿Cuál es el plural de «casa»?",
-        "opciones": ["casaes", "casas", "casess"],
-        "respuesta": "casas",
-        "explicacion": "La mayoría de los sustantivos terminados en vocal "
-                       "forman el plural añadiendo -s: casa → casas."
-    },
-    {
-        "pregunta": "Completa: «Yo ___ estudiante».",
-        "opciones": ["soy", "eres", "somos"],
-        "respuesta": "soy",
-        "explicacion": "Con el pronombre «yo» usamos «soy»: yo soy estudiante."
-    },
-    {
-        "pregunta": "¿Cuál palabra es un verbo?",
-        "opciones": ["bonito", "correr", "mesa"],
-        "respuesta": "correr",
-        "explicacion": "«Correr» es un verbo porque expresa una acción."
-    },
-    {
-        "pregunta": "Completa: «Ayer yo ___ al parque».",
-        "opciones": ["voy", "iré", "fui"],
-        "respuesta": "fui",
-        "explicacion": "«Fui» es una forma del verbo ir en pasado."
-    },
-    {
-        "pregunta": "¿Cuál es el antónimo de «grande»?",
-        "opciones": ["enorme", "pequeño", "amplio"],
-        "respuesta": "pequeño",
-        "explicacion": "«Pequeño» expresa una idea opuesta a «grande»."
-    },
-]
-
-
-def normalizar(texto: str) -> str:
-    texto = texto.strip().lower()
-    texto = unicodedata.normalize("NFD", texto)
-    return "".join(
-        caracter for caracter in texto
-        if unicodedata.category(caracter) != "Mn"
-    )
+COMANDOS = (
+    "/leccion - Seguir tu lección (explicación, ejercicios y escritura)\n"
+    "/practicar - Un ejercicio suelto de tu nivel\n"
+    "/siguiente - Otro ejercicio\n"
+    "/nivel - Tu nivel, idioma y avance\n"
+    "/puntos - Tus respuestas correctas e incorrectas\n"
+    "/idioma - Cambiar de idioma (inglés o español)\n"
+    "/traducir <texto> - Traducir una palabra o frase\n"
+    "/reiniciar - Repetir el examen de nivel\n"
+    "/help - Ver la ayuda"
+)
 
 
 async def start(
@@ -98,15 +79,12 @@ async def start(
         return
 
     # Ya tiene nivel: menú normal
-    nivel = context.user_data["nivel"]["level"]
+    nivel = context.user_data["nivel"]
+    idioma = "inglés" if nivel["language"] == "en" else "español"
     await update.message.reply_text(
-        f"¡Hola de nuevo! 👋 Tu nivel actual es {nivel}.\n\n"
-        "Comandos disponibles:\n"
-        "/practicar - Comenzar un ejercicio\n"
-        "/siguiente - Cambiar de ejercicio\n"
-        "/puntos - Consultar tu puntuación\n"
-        "/help - Ver la ayuda\n\n"
-        "Escribe /practicar para comenzar."
+        f"¡Hola de nuevo! 👋 Estudias {idioma}, nivel {nivel['level']}.\n\n"
+        f"Comandos disponibles:\n{COMANDOS}\n\n"
+        "Escribe /leccion para seguir donde ibas."
     )
 
 
@@ -114,9 +92,13 @@ async def reiniciar(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-    """Solo para pruebas: borra el nivel y vuelve a lanzar el examen."""
-    context.user_data.pop("nivel", None)
+    """Borra el nivel del idioma actual y vuelve a lanzar el examen (para pruebas)."""
+    nivel = context.user_data.pop("nivel", None)
+    if nivel:
+        context.user_data.get("niveles", {}).pop(nivel["language"], None)
+        context.user_data.get("progreso", {}).pop(nivel["language"], None)
     context.user_data.pop("examen", None)
+    context.user_data["esperando"] = None
     await iniciar_examen(update, context)
 
 
@@ -126,42 +108,11 @@ async def help_command(
 ):
     await update.message.reply_text(
         "📚 ¿Cómo usar el tutor?\n\n"
-        "/start - Iniciar\n"
-        "/practicar - Resolver una pregunta\n"
-        "/siguiente - Obtener otra pregunta\n"
-        "/puntos - Ver tus resultados\n"
-        "/traducir <texto> - Traducir una palabra o frase\n"
-        "/reiniciar - Repetir el examen de nivel\n\n"
-        "Lee la pregunta, escribe tu respuesta y "
-        "recibirás una explicación."
-    )
-
-
-async def practicar(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-    if en_examen(context):
-        await update.message.reply_text(
-            "Primero termina el examen de nivel 📝"
-        )
-        return
-
-    ejercicio = random.choice(EJERCICIOS)
-
-    context.user_data["ejercicio"] = ejercicio
-    context.user_data["respondido"] = False
-
-    opciones = "\n".join(
-        f"{i + 1}. {opcion}"
-        for i, opcion in enumerate(ejercicio["opciones"])
-    )
-
-    await update.message.reply_text(
-        f"📝 Ejercicio de español\n\n"
-        f"{ejercicio['pregunta']}\n\n"
-        f"{opciones}\n\n"
-        "Escribe la respuesta o su número (1, 2 o 3)."
+        "/start - Iniciar (la primera vez hace el examen de nivel)\n"
+        f"{COMANDOS}\n\n"
+        "Cada lección tiene una explicación corta, ejercicios con botones y una escritura corta. "
+        "Si fallas un tema, lo repasamos con otras preguntas; si aciertas seguido, avanzas. "
+        "Al terminar las 5 lecciones de tu nivel puedes volver a presentar el examen para subir."
     )
 
 
@@ -169,60 +120,25 @@ async def responder(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-    # Si el usuario está en el examen, ese flujo atiende el mensaje
+    # Si el usuario está en el examen o en la escritura de una lección, ese flujo atiende el mensaje
     if await texto_de_examen(update, context):
         return
-
-    mensaje = update.message.text.strip()
-    texto = normalizar(mensaje)
-
-    ejercicio = context.user_data.get("ejercicio")
-
-    if ejercicio and not context.user_data.get("respondido", False):
-        respuesta = normalizar(ejercicio["respuesta"])
-
-        if texto in {"1", "2", "3"}:
-            texto = normalizar(ejercicio["opciones"][int(texto) - 1])
-
-        if texto == respuesta:
-            context.user_data["puntos"] = (
-                context.user_data.get("puntos", 0) + 1
-            )
-            context.user_data["correctas"] = (
-                context.user_data.get("correctas", 0) + 1
-            )
-
-            await update.message.reply_text(
-                "¡Correcto! 🎉\n\n"
-                f"{ejercicio['explicacion']}\n\n"
-                "Escribe /siguiente para continuar."
-            )
-        else:
-            context.user_data["incorrectas"] = (
-                context.user_data.get("incorrectas", 0) + 1
-            )
-
-            await update.message.reply_text(
-                "¡Casi! 😊 La respuesta correcta es "
-                f"«{ejercicio['respuesta']}».\n\n"
-                f"{ejercicio['explicacion']}\n\n"
-                "Escribe /siguiente para probar otra pregunta."
-            )
-
-        context.user_data["respondido"] = True
+    if await texto_de_leccion(update, context):
         return
 
-    if texto in {"hola", "buenas", "buenos dias", "buenas tardes"}:
+    ej = context.user_data.get("ej_actual")
+    if ej and not ej.get("respondida"):
         await update.message.reply_text(
-            "¡Hola! 😊 ¿Te animas a practicar español?\n"
-            "Escribe /practicar para comenzar."
+            "Answer with the buttons of the exercise 👆" if ej["language"] == "en"
+            else "Responde con los botones del ejercicio 👆"
         )
-    else:
-        await update.message.reply_text(
-            "¡Vamos a aprender juntos! 📚\n\n"
-            "Para iniciar un ejercicio, escribe /practicar.\n"
-            "Para consultar tus puntos, escribe /puntos."
-        )
+        return
+
+    await update.message.reply_text(
+        "¡Vamos a aprender juntos! 📚\n\n"
+        "Escribe /leccion para seguir tu lección o /practicar para un ejercicio suelto.\n"
+        "Para ver todos los comandos, escribe /help."
+    )
 
 
 async def recibir_voz(
@@ -235,7 +151,7 @@ async def recibir_voz(
 
     await update.message.reply_text(
         "Gracias por el audio 🎤 Por ahora solo lo uso en la parte de habla "
-        "del examen de nivel.\n\nEscribe /practicar para seguir con los ejercicios."
+        "del examen de nivel.\n\nEscribe /leccion para seguir con tu lección."
     )
 
 
@@ -247,18 +163,11 @@ async def puntos(
     incorrectas = context.user_data.get("incorrectas", 0)
 
     await update.message.reply_text(
-        "🏆 Tu progreso en esta sesión\n\n"
+        "🏆 Tu progreso\n\n"
         f"✅ Respuestas correctas: {total}\n"
         f"❌ Respuestas incorrectas: {incorrectas}\n\n"
         "¡Sigue practicando para mejorar!"
     )
-
-
-async def siguiente(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-    await practicar(update, context)
 
 
 async def al_iniciar(app: Application):
@@ -293,8 +202,11 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reiniciar", reiniciar))
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("leccion", leccion))
     app.add_handler(CommandHandler("practicar", practicar))
-    app.add_handler(CommandHandler("siguiente", siguiente))
+    app.add_handler(CommandHandler("siguiente", practicar))
+    app.add_handler(CommandHandler("nivel", comando_nivel))
+    app.add_handler(CommandHandler("idioma", comando_idioma))
     app.add_handler(CommandHandler("puntos", puntos))
     app.add_handler(CommandHandler("traducir", comando_traducir))
     app.add_handler(CallbackQueryHandler(elegir_idioma, pattern=r"^lang:"))
@@ -302,6 +214,9 @@ def main():
     app.add_handler(CallbackQueryHandler(responder_escucha, pattern=r"^lis:"))
     app.add_handler(CallbackQueryHandler(repetir_audio, pattern=r"^rep:"))
     app.add_handler(CallbackQueryHandler(ver_traduccion, pattern=r"^tr:"))
+    app.add_handler(CallbackQueryHandler(responder_ejercicio, pattern=r"^(pr|lc):"))
+    app.add_handler(CallbackQueryHandler(responder_repaso, pattern=r"^rex:"))
+    app.add_handler(CallbackQueryHandler(elegir_idioma_tutor, pattern=r"^idioma:"))
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, responder)
     )

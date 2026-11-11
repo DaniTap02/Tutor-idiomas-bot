@@ -540,6 +540,19 @@ def _pick_qtype(banco, topic: str, planned: dict) -> str | None:
     return random.choice([t for t in allowed if planned.get(t, 0) == least])
 
 
+def generar_ejercicio(banco, language: str, topic: str, kind: str = "grammar") -> dict:
+    """UNA pregunta validada sobre `topic`, para la práctica y las lecciones del tutor (exam/tutor.py).
+
+    Pasa por los MISMOS filtros, verificación con el modelo y evidencia citada que el examen; lo
+    anulado se registra en voided_questions.jsonl. Lanza RuntimeError si no logra una pregunta
+    válida (el tutor avisa y no cuenta nada en contra del estudiante)."""
+    pregunta = _make_question(kind, topic, banco, language)
+    if pregunta is None:
+        raise RuntimeError(f"No se pudo generar una pregunta válida de: {topic[:60]}")
+    pregunta["kind"] = kind
+    return pregunta
+
+
 def generate_reading(banco, language: str) -> list[dict]:
     """Devuelve hasta banco.N_READING preguntas: [{"q", "options", "answer", "topic"[, "text", "qtype"]}, ...].
     Si faltan 1 o 2, sigue con las que hay; solo falla si logra menos."""

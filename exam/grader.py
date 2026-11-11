@@ -24,6 +24,27 @@ OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT") or 120)
 LANGUAGE_NAME = {"en": "English", "es": "Spanish"}
 LANGUAGE_NAME_ES = {"en": "inglés", "es": "español"}
 
+# Mensajes fijos que ve el estudiante, en el idioma de la interfaz (ui_language). El examen usa
+# español; las lecciones del tutor usan el idioma que se estudia.
+MENSAJES = {
+    "es": {
+        "corto_habla": "Tu audio es muy corto. Habla al menos {n} palabras en {idioma}.",
+        "corto_texto": "Tu texto es muy corto. Escribe al menos {n} palabras en {idioma}.",
+        "idioma_habla": "Debes hablar en {idioma}.",
+        "idioma_texto": "Tu texto debe estar escrito en {idioma}.",
+        "falto": "Te faltó incluir:",
+        "nombres": LANGUAGE_NAME_ES,
+    },
+    "en": {
+        "corto_habla": "Your audio is too short. Say at least {n} words in {idioma}.",
+        "corto_texto": "Your text is too short. Write at least {n} words in {idioma}.",
+        "idioma_habla": "You must speak in {idioma}.",
+        "idioma_texto": "Your text must be written in {idioma}.",
+        "falto": "You still need to include:",
+        "nombres": LANGUAGE_NAME,
+    },
+}
+
 # Valores iniciales: calibrar probando con textos reales.
 PENALTY_PER_ERROR = {"A1": 10, "A2": 8, "B1": 6, "B2": 6}
 MIN_WORDS = {"A1": 5, "A2": 20, "B1": 50, "B2": 40}
@@ -166,6 +187,8 @@ def grade(
     is_transcript: bool = False,
     feedback_language: str = "Spanish",
     skill: str = "writing",
+    min_words: int | None = None,
+    ui_language: str = "es",
 ) -> dict:
     """Devuelve:
     {"score": 0-100, "task_completed": bool, "errors": [...], "feedback": str, "needs_rewrite": bool}
@@ -176,22 +199,17 @@ def grade(
     skill: "writing" o "speaking". Solo cambia los mensajes en español que ve el estudiante
     (en la parte de habla se le dice "audio"/"habla", no "texto"/"escribe") y el mínimo de palabras.
     is_transcript: el texto viene de una transcripción (se ignoran puntuación y mayúsculas).
+    min_words: mínimo de palabras propio (las escrituras cortas de las lecciones); por defecto el del examen.
+    ui_language: idioma de los mensajes fijos ("es" en el examen; el que se estudia en las lecciones).
     """
     hablando = skill == "speaking"
-    minimo = (MIN_WORDS_SPEAKING if hablando else MIN_WORDS)[level]
+    minimo = min_words if min_words is not None else (MIN_WORDS_SPEAKING if hablando else MIN_WORDS)[level]
+    textos = MENSAJES.get(ui_language, MENSAJES["es"])
+    idioma = textos["nombres"][language]
 
     # 1) Largo mínimo: lo decide el código, no el modelo
     if len(text.split()) < minimo:
-        if hablando:
-            aviso = (
-                f"Tu audio es muy corto. Habla al menos {minimo} palabras "
-                f"en {LANGUAGE_NAME_ES[language]}."
-            )
-        else:
-            aviso = (
-                f"Tu texto es muy corto. Escribe al menos {minimo} palabras "
-                f"en {LANGUAGE_NAME_ES[language]}."
-            )
+        aviso = textos["corto_habla" if hablando else "corto_texto"].format(n=minimo, idioma=idioma)
         return {
             "score": 0,
             "task_completed": False,
@@ -224,11 +242,7 @@ def grade(
             "task_completed": False,
             "errors": [],
             "needs_rewrite": True,
-            "feedback": (
-                f"Debes hablar en {LANGUAGE_NAME_ES[language]}."
-                if hablando
-                else f"Tu texto debe estar escrito en {LANGUAGE_NAME_ES[language]}."
-            ),
+            "feedback": textos["idioma_habla" if hablando else "idioma_texto"].format(idioma=idioma),
             "missing": [c["id"] for c in checklist],
         }
 
@@ -247,7 +261,7 @@ def grade(
         for c in missing:
             motivo = _requisito_motivo(answers.get(c["id"]))
             lineas.append(f"• {c['label_es']}" + (f" — {motivo}" if motivo else ""))
-        feedback = "Te faltó incluir:\n" + "\n".join(lineas)
+        feedback = textos["falto"] + "\n" + "\n".join(lineas)
     else:
         feedback = result.get("feedback", "")
 

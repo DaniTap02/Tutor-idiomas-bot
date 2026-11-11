@@ -110,6 +110,12 @@ def tiene_nivel(context: ContextTypes.DEFAULT_TYPE) -> bool:
     return "nivel" in context.user_data
 
 
+def guardar_nivel(context: ContextTypes.DEFAULT_TYPE, nivel: dict) -> None:
+    """Nivel activo del usuario + su nivel POR IDIOMA (para /idioma). Se guardan los dos."""
+    context.user_data["nivel"] = dict(nivel)
+    context.user_data.setdefault("niveles", {})[nivel["language"]] = dict(nivel)
+
+
 def _estado_inicial(language: str, level: str) -> dict:
     """Estado de un nivel que empieza. Se usa al iniciar el examen y al pasar al nivel siguiente."""
     return {
@@ -195,12 +201,19 @@ async def elegir_idioma(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if en_examen(context):  # doble clic mientras se generan las preguntas
         return
     language = query.data.split(":")[1]
-    context.user_data["examen"] = _estado_inicial(language, "A1")
     await query.edit_message_text(f"Perfecto: {IDIOMAS[language]}. Empezamos con el nivel A1. 💪")
-    if not await _preparar_preguntas(query.message, context):
+    await iniciar_examen_en(query.message, context, language, "A1")
+
+
+async def iniciar_examen_en(message, context: ContextTypes.DEFAULT_TYPE, language: str, level: str = "A1"):
+    """Empieza el examen en un idioma y nivel concretos, sin preguntar el idioma.
+    Lo usan /idioma (idioma nuevo, desde A1) y el tutor al terminar las 5 lecciones de un nivel
+    (vuelve a presentar el examen de ESE nivel para subir)."""
+    context.user_data["examen"] = _estado_inicial(language, level)
+    if not await _preparar_preguntas(message, context):
         return
     context.user_data["examen"]["part"] = "lectura"
-    await _enviar_pregunta(query.message, context)
+    await _enviar_pregunta(message, context)
 
 
 # ---------------------------------------------------------------- Utilidades de mensajes
@@ -773,11 +786,11 @@ async def _cerrar_nivel(message, context: ContextTypes.DEFAULT_TYPE):
         ex.update(_estado_inicial(ex["language"], siguiente["level"]))
         ex.pop("writing_task", None)
         # Si falla la generación, el usuario no pierde lo ganado: queda en el nivel siguiente (provisional)
-        context.user_data["nivel"] = {
+        guardar_nivel(context, {
             "language": ex["language"],
             "level": siguiente["level"],
             "provisional": True,
-        }
+        })
         await _responder_largo(message, f"{resumen}\n\n✅ ¡Pasaste {nivel_rendido}! Sigue el examen {siguiente['level']}.")
         if revision_escucha:
             await _responder_largo(message, revision_escucha)
@@ -808,11 +821,11 @@ async def _cerrar_nivel(message, context: ContextTypes.DEFAULT_TYPE):
     else:
         mensaje = "🎉 ¡Completaste todos los niveles del examen!"
 
-    context.user_data["nivel"] = {
+    guardar_nivel(context, {
         "language": ex["language"],
         "level": siguiente["level"],
         "provisional": provisional,
-    }
+    })
     context.user_data.pop("examen", None)
     await _responder_largo(message, f"{resumen}\n\n{mensaje}\n\nEscribe /start para ver el menú.")
     if revision_escucha:
