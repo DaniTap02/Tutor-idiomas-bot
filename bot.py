@@ -14,8 +14,11 @@ from telegram.ext import (  # noqa: E402
     MessageHandler,
     PicklePersistence,
     ContextTypes,
+    TypeHandler,
     filters,
 )
+
+from exam import historial  # noqa: E402
 
 from exam.telegram_flow import (  # noqa: E402
     elegir_idioma,
@@ -55,7 +58,7 @@ COMANDOS = (
     "/practicar - Un ejercicio suelto de tu nivel\n"
     "/siguiente - Otro ejercicio\n"
     "/nivel - Tu nivel, idioma y avance\n"
-    "/puntos - Tus respuestas correctas e incorrectas\n"
+    "/puntos - Tu progreso acumulado (no se borra con /reiniciar)\n"
     "/idioma - Cambiar de idioma (inglés o español)\n"
     "/traducir <texto> - Traducir una palabra o frase\n"
     "/reiniciar - Repetir el examen de nivel\n"
@@ -155,23 +158,59 @@ async def recibir_voz(
     )
 
 
+NOMBRE_IDIOMA = {"en": "Inglés 🇬🇧", "es": "Español 🇪🇸"}
+TIPO_ERROR = {"grammar": "gramática", "vocabulary": "vocabulario", "spelling": "ortografía", "otro": "otros"}
+
+
+def texto_puntos(datos: dict) -> str:
+    """Mensaje de /puntos a partir de historial.resumen_usuario()."""
+    if not datos:
+        return ("🏆 Tu progreso\n\nTodavía no tienes ejercicios guardados. "
+                "Escribe /leccion o /practicar para empezar 💪")
+    bloques = ["🏆 Tu progreso acumulado"]
+    for idioma, d in datos.items():
+        lineas = [f"\n{NOMBRE_IDIOMA.get(idioma, idioma)}"]
+        ok, total = d.get("ejercicios", (0, 0))
+        if total:
+            lineas.append(f"✅ {ok}  ❌ {total - ok}  ({100 * ok / total:.0f}% de aciertos en {total} ejercicios)")
+        if d.get("lecciones"):
+            lineas.append(f"📚 Lecciones completadas: {d['lecciones']}")
+        for nivel, aprobado, veces in d.get("examenes", []):
+            lineas.append(f"📝 Examen {nivel}: {'aprobado ✅' if aprobado else 'no aprobado todavía'}"
+                          f" ({veces} {'vez' if veces == 1 else 'veces'})")
+        flojos = [t for t in d.get("temas_flojos", []) if t[1] < t[2]][:3]
+        if flojos:
+            lineas.append("🔁 Para repasar: " + "; ".join(
+                f"{t[0].split('(')[0].strip()[:40]} ({t[1]}/{t[2]})" for t in flojos))
+        if d.get("errores"):
+            lineas.append("✍️ Errores en tus textos: " + ", ".join(
+                f"{TIPO_ERROR.get(tipo, tipo)} {n}" for tipo, n in d["errores"]))
+        bloques.append("\n".join(lineas))
+    bloques.append("\n¡Sigue practicando para mejorar!")
+    return "\n".join(bloques)[:4096]
+
+
 async def puntos(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-    total = context.user_data.get("correctas", 0)
-    incorrectas = context.user_data.get("incorrectas", 0)
+    """Progreso REAL acumulado (SQLite): no se pierde con /reiniciar ni al apagar el bot."""
+    datos = historial.resumen_usuario(update.effective_user.id) if update.effective_user else {}
+    await update.message.reply_text(texto_puntos(datos))
 
-    await update.message.reply_text(
-        "🏆 Tu progreso\n\n"
-        f"✅ Respuestas correctas: {total}\n"
-        f"❌ Respuestas incorrectas: {incorrectas}\n\n"
-        "¡Sigue practicando para mejorar!"
-    )
+
+async def anotar_usuario(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Corre ANTES de cualquier manejador: guarda quién es el usuario (para el historial) y su actividad."""
+    usuario = update.effective_user
+    if usuario is None or context.user_data is None:
+        return
+    context.user_data["uid"] = usuario.id
+    historial.registrar_actividad(usuario.id, "boton" if update.callback_query else "mensaje")
 
 
 async def al_iniciar(app: Application):
     """Abre UNA sesión con el servidor MCP de Lara para toda la vida del bot (si está configurado)."""
+    lara.cliente.al_usar = historial.registrar_uso_lara   # uso de las 2 herramientas de Lara
     if await lara.iniciar():
         print("Lara Translate (MCP) conectado.")
     else:
@@ -199,6 +238,8 @@ def main():
         .build()
     )
 
+    # Grupo -1: se ejecuta antes que los demás manejadores y no los bloquea
+    app.add_handler(TypeHandler(Update, anotar_usuario), group=-1)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reiniciar", reiniciar))
     app.add_handler(CommandHandler("help", help_command))

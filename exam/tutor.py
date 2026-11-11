@@ -25,6 +25,7 @@ import random
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
+from exam import historial
 from exam.grader import LANGUAGE_NAME, _call_ollama, grade
 from exam.lecciones import LECCIONES, MIN_PALABRAS_LECCION
 from exam.question_generator import NON_LATIN, _forbidden_re, _forbidden_text, generar_ejercicio
@@ -46,10 +47,6 @@ MAX_EJERCICIOS_LECCION = 10    # tope si sigue fallando: pasa a la escritura igu
 RACHA_PARA_AVANZAR = 3         # aciertos seguidos con los que avanza antes de las 5
 PROB_TEMA_FALLADO = 0.5        # en /practicar, probabilidad de repasar un tema que falló
 MAX_EXPLICACION = 900          # caracteres
-
-# Ganchos opcionales para el historial (Fase 3): se llaman con (user_data, datos)
-al_responder = None            # ejercicio respondido: {"origen", "language", "level", "topic", "correcta"}
-al_completar = None            # lección completada: {"language", "level", "leccion", "score", "errores"}
 
 # Usuarios para los que se está generando algo ahora (no se guarda en disco: si el bot se cae a
 # mitad, no queda nadie "bloqueado" para siempre).
@@ -374,12 +371,8 @@ async def responder_ejercicio(update: Update, context: ContextTypes.DEFAULT_TYPE
     clave = "correctas" if correcta else "incorrectas"
     context.user_data[clave] = context.user_data.get(clave, 0) + 1
     _anotar_tema(context.user_data, language, ej["kind"], ej["topic"], correcta)
-    if al_responder:
-        try:
-            al_responder(context.user_data, {"origen": origen, "language": language, "level": ej["level"],
-                                             "topic": ej["topic"], "correcta": correcta})
-        except Exception:
-            log.warning("El historial no pudo guardar la respuesta", exc_info=True)
+    historial.registrar_ejercicio(context.user_data, "practica" if origen == "pr" else "leccion",
+                                  language, ej["level"], ej["topic"], correcta)
 
     resultado = _t(language, "correcto") if correcta else _t(language, "incorrecto", r=ej["options"][ej["answer"]])
     if origen == "pr":
@@ -535,12 +528,8 @@ async def texto_de_leccion(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await espera.edit_text(respuesta[:4096],
                            reply_markup=teclado_traduccion(context, r["feedback"], language, language, level))
 
-    if al_completar:
-        try:
-            al_completar(context.user_data, {"language": language, "level": level, "leccion": actual["id"],
-                                             "score": r["score"], "errores": r["errors"]})
-        except Exception:
-            log.warning("El historial no pudo guardar la lección", exc_info=True)
+    historial.registrar_leccion(context.user_data, language, level, actual["id"], r["score"])
+    historial.registrar_errores(context.user_data, language, level, "leccion", "writing", r["errors"])
 
     context.user_data["esperando"] = None
     prog["completadas"].append(actual["id"])

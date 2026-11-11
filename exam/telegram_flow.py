@@ -24,7 +24,7 @@ import httpx
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from exam import questions_a1, questions_a2, questions_b1
+from exam import historial, questions_a1, questions_a2, questions_b1
 from exam.grader import grade
 from exam.listening import CONFIG as ESCUCHA_CONFIG
 from exam.listening import generate_listening
@@ -573,6 +573,7 @@ async def texto_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return True
 
     ex["scores"]["escritura"] = r["score"]
+    historial.registrar_errores(context.user_data, ex["language"], ex["level"], "examen", "writing", r["errors"])
 
     texto = r["feedback"]
     if r["errors"]:
@@ -717,6 +718,7 @@ async def voz_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
 
     ex["habla_fallos"] = 0   # funcionó: se reinicia la cuenta de fallos técnicos
     ex["scores"]["habla"] = r["score"]
+    historial.registrar_errores(context.user_data, ex["language"], ex["level"], "examen", "speaking", r["errors"])
     respuesta = f"Esto fue lo que entendí:\n«{texto}»\n\n{r['feedback']}"
     if r["errors"]:
         correcciones = "\n".join(f"• {e['fragment']} → {e['correction']}" for e in r["errors"][:3])
@@ -772,6 +774,7 @@ async def _cerrar_nivel(message, context: ContextTypes.DEFAULT_TYPE):
     s = ex["scores"]
     paso = level_passed(s["lectura"], s["escritura"], s.get("habla"), s.get("escucha"))
     siguiente = next_step(nivel_rendido, paso)
+    historial.registrar_examen(context.user_data, ex["language"], nivel_rendido, s, paso)
 
     resumen = (
         f"📊 Resultado {nivel_rendido}\n"

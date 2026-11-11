@@ -7,3 +7,4 @@ ClaudeRespaldo
 audio_prueba/
 diagnostico_audio/
 voided_questions.jsonl
+*.db
