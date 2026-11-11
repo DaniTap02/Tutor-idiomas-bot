@@ -55,7 +55,7 @@ class FakeMessage:
         self.log.append(("audio", caption or title or ""))
         return FakeMessage(self.log)
 
-    async def edit_text(self, texto):
+    async def edit_text(self, texto, reply_markup=None):
         self.log.append(("edit", texto))
 
     async def delete(self):

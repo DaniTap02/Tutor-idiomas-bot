@@ -26,6 +26,8 @@ from exam.telegram_flow import (
     tiene_nivel,
     voz_de_examen,
 )
+from exam.traduccion import comando_traducir, ver_traduccion
+from mcp_cliente import lara
 
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -128,6 +130,7 @@ async def help_command(
         "/practicar - Resolver una pregunta\n"
         "/siguiente - Obtener otra pregunta\n"
         "/puntos - Ver tus resultados\n"
+        "/traducir <texto> - Traducir una palabra o frase\n"
         "/reiniciar - Repetir el examen de nivel\n\n"
         "Lee la pregunta, escribe tu respuesta y "
         "recibirás una explicación."
@@ -258,6 +261,18 @@ async def siguiente(
     await practicar(update, context)
 
 
+async def al_iniciar(app: Application):
+    """Abre UNA sesión con el servidor MCP de Lara para toda la vida del bot (si está configurado)."""
+    if await lara.iniciar():
+        print("Lara Translate (MCP) conectado.")
+    else:
+        print(f"Lara Translate no disponible ({lara.cliente.ultimo_motivo}): el bot sigue sin traducción.")
+
+
+async def al_apagar(app: Application):
+    await lara.cerrar()
+
+
 def main():
     if not TOKEN:
         raise RuntimeError(
@@ -266,7 +281,14 @@ def main():
 
     # Guarda user_data en disco: el nivel del usuario sobrevive al reiniciar el bot
     persistence = PicklePersistence(filepath="datos_bot.pkl")
-    app = Application.builder().token(TOKEN).persistence(persistence).build()
+    app = (
+        Application.builder()
+        .token(TOKEN)
+        .persistence(persistence)
+        .post_init(al_iniciar)
+        .post_shutdown(al_apagar)
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reiniciar", reiniciar))
@@ -274,10 +296,12 @@ def main():
     app.add_handler(CommandHandler("practicar", practicar))
     app.add_handler(CommandHandler("siguiente", siguiente))
     app.add_handler(CommandHandler("puntos", puntos))
+    app.add_handler(CommandHandler("traducir", comando_traducir))
     app.add_handler(CallbackQueryHandler(elegir_idioma, pattern=r"^lang:"))
     app.add_handler(CallbackQueryHandler(responder_lectura, pattern=r"^ans:"))
     app.add_handler(CallbackQueryHandler(responder_escucha, pattern=r"^lis:"))
     app.add_handler(CallbackQueryHandler(repetir_audio, pattern=r"^rep:"))
+    app.add_handler(CallbackQueryHandler(ver_traduccion, pattern=r"^tr:"))
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, responder)
     )

@@ -125,6 +125,14 @@ MOTIVOS = {
     "memoria": "no hubo memoria suficiente para cargar el modelo de voz",
     "transcripcion": "el modelo falló al transcribir el audio",
     "sin_voz": "no se reconoció voz en la grabación",
+    # --- Traducción y detección de idioma (servidor MCP de Lara Translate) ---
+    "lara_sin_config": "faltan LARA_ACCESS_KEY_ID o LARA_ACCESS_KEY_SECRET en el .env",
+    "lara_servidor": "no se pudo arrancar el servidor MCP de Lara (falta Node.js/npx o falló npx)",
+    "lara_credenciales": "Lara rechazó las credenciales (Access Key ID o Secret inválidos)",
+    "lara_cuota": "se agotó la cuota del plan de Lara o hay demasiadas peticiones seguidas",
+    "lara_tiempo": "Lara tardó más de lo permitido en responder",
+    "lara_red": "no se pudo conectar con el servicio de Lara",
+    "lara_servicio": "Lara respondió con un error o con un formato inesperado",
     # --- Otros ---
     "desconocido": "error no clasificado: revisar el registro",
 }
@@ -193,6 +201,36 @@ def clasificar_stt(exc: BaseException) -> str:
     if "unable to open" in texto or "no such file" in texto:
         return "archivo_falta"
     return "transcripcion"
+
+
+def clasificar_lara(error: BaseException | str) -> str:
+    """Motivo real de un fallo del servidor MCP de Lara.
+
+    `error` puede ser una excepción (el proceso no arrancó, se agotó el tiempo...) o el texto de
+    error que devolvió la herramienta (`isError`), por ejemplo "Unauthorized"."""
+    import asyncio
+
+    if isinstance(error, BaseException):
+        if isinstance(error, (TimeoutError, asyncio.TimeoutError)):
+            return "lara_tiempo"
+        if isinstance(error, (FileNotFoundError, NotADirectoryError, PermissionError)):
+            return "lara_servidor"   # no se encontró npx / Node.js
+        texto = _texto_de(error).lower()
+    else:
+        texto = str(error).lower()
+    if any(p in texto for p in ("unauthorized", "401", "403", "forbidden", "invalid credentials",
+                                "access key")):
+        return "lara_credenciales"
+    if any(p in texto for p in ("quota", "limit", "429", "402", "too many", "exceeded", "payment")):
+        return "lara_cuota"
+    if any(p in texto for p in ("timeout", "timed out")):
+        return "lara_tiempo"
+    if any(p in texto for p in ("enotfound", "econnrefused", "econnreset", "network", "getaddrinfo",
+                                "fetch failed")):
+        return "lara_red"
+    if any(p in texto for p in ("connection closed", "npx", "spawn", "enoent")):
+        return "lara_servidor"
+    return "lara_servicio"
 
 
 @contextmanager

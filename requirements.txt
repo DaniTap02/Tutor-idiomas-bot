@@ -3,8 +3,17 @@
 # (las librerías que estas necesitan por debajo las instala pip automáticamente)
 
 # --- Bot de Telegram ---
-python-telegram-bot==22.8
+# [job-queue] trae APScheduler, que usan los recordatorios (/recordatorio).
+python-telegram-bot[job-queue]==22.8
 python-dotenv==1.2.4
+# Zona horaria de Colombia (America/Bogota) para los recordatorios: Windows no trae la base de
+# datos de zonas horarias, zoneinfo la toma de este paquete.
+tzdata==2026.6
+
+# --- MCP: cliente del servidor de Lara Translate (traducción y detección de idioma) ---
+# SDK oficial de Python. El servidor es un paquete de Node.js (@translated/lara-mcp) que se
+# arranca solo con npx: hace falta Node.js 22.23.4 o superior instalado, no se instala con pip.
+mcp==2.3.0
 
 # --- Llamadas a Ollama (generador de preguntas y calificador) ---
 httpx==0.28.1

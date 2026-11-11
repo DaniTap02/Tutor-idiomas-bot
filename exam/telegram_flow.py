@@ -32,6 +32,7 @@ from exam.placement import level_passed, next_step
 from exam.question_generator import generate_reading
 from exam.registro import Fallo, describir, medir, registrar_fallo
 from exam.stt import modelo_cargado, transcribe
+from exam.traduccion import revisar_idioma, teclado_traduccion
 from exam.tts import synthesize
 
 # Al crear el examen de B2 solo hay que agregarlo aquí (su escucha ya está en exam/listening.py).
@@ -334,7 +335,7 @@ async def responder_lectura(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _enviar_escucha(query.message, context)
         return
 
-    await _pasar_a_escritura(query.message, ex)
+    await _pasar_a_escritura(query.message, context)
 
 
 # ---------------------------------------------------------------- Escucha
@@ -450,7 +451,7 @@ async def responder_escucha(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         log.warning("Ningún audio de la escucha se pudo generar: el nivel se evalúa sin esa parte")
 
-    await _pasar_a_escritura(query.message, ex)
+    await _pasar_a_escritura(query.message, context)
 
 
 async def repetir_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -492,19 +493,26 @@ def _revision_escucha(ex: dict) -> str:
 
 # ---------------------------------------------------------------- Escritura
 
-async def _pasar_a_escritura(message, ex: dict):
+async def _pasar_a_escritura(message, context: ContextTypes.DEFAULT_TYPE):
+    ex = context.user_data["examen"]
     banco = BANCOS[ex["level"]]
     ex["part"] = "escritura"
     _elegir_tarea_escritura(banco, ex)
     prompt, _ = _tarea_escritura(banco, ex)
-    await message.reply_text(f"✍️ Escritura\n\n{prompt[ex['language']]}")
+    consigna = prompt[ex["language"]]
+    # A1 y A2: botón "Ver traducción" de la consigna (Lara Translate)
+    teclado = teclado_traduccion(context, consigna, ex["language"], ex["language"], ex["level"])
+    await message.reply_text(f"✍️ Escritura\n\n{consigna}", reply_markup=teclado)
 
 
-async def _pasar_a_habla(message, ex: dict):
+async def _pasar_a_habla(message, context: ContextTypes.DEFAULT_TYPE):
+    ex = context.user_data["examen"]
     banco = BANCOS[ex["level"]]
     ex["part"] = "habla"
+    consigna = banco.SPEAKING_PROMPT[ex["language"]]
     aviso = "" if modelo_cargado() else "\n\n(La primera nota de voz tarda más: se carga el modelo de voz.)"
-    await message.reply_text(f"🎤 Habla\n\n{banco.SPEAKING_PROMPT[ex['language']]}{aviso}")
+    teclado = teclado_traduccion(context, consigna, ex["language"], ex["language"], ex["level"])
+    await message.reply_text(f"🎤 Habla\n\n{consigna}{aviso}", reply_markup=teclado)
 
 
 async def texto_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -530,6 +538,9 @@ async def texto_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     banco = BANCOS[ex["level"]]
     _, checklist = _tarea_escritura(banco, ex)
     espera = await update.message.reply_text("Calificando tu texto… ⏳")
+    # Lara (detect_language): si está claramente en otro idioma, se pide de nuevo sin calificar
+    if await revisar_idioma(espera, update.message.text, ex["language"], "writing"):
+        return True
     try:
         # grade() es síncrona: se corre en un hilo para no congelar el bot
         r = await asyncio.to_thread(
@@ -554,9 +565,10 @@ async def texto_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if r["errors"]:
         correcciones = "\n".join(f"• {e['fragment']} → {e['correction']}" for e in r["errors"][:3])
         texto += f"\n\nPara mejorar:\n{correcciones}"
-    await espera.edit_text(texto)
+    # La retroalimentación va en español: en A1/A2 de español se puede ver en inglés
+    await espera.edit_text(texto, reply_markup=teclado_traduccion(context, texto, "es", ex["language"], ex["level"]))
 
-    await _pasar_a_habla(update.message, ex)
+    await _pasar_a_habla(update.message, context)
     return True
 
 
@@ -663,6 +675,10 @@ async def voz_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
         )
         return True
 
+    # Lara (detect_language): si habló claramente en otro idioma, se pide de nuevo sin calificar
+    if await revisar_idioma(espera, texto, ex["language"], "speaking"):
+        return True
+
     try:
         r = await asyncio.to_thread(
             grade,
@@ -694,7 +710,10 @@ async def voz_de_examen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
         respuesta += f"\n\nPara mejorar:\n{correcciones}"
     if audio["wpm"] and audio["wpm"] < WPM_MUY_LENTO:
         respuesta += "\n\n💡 Hablaste con muchas pausas. Intenta decir frases seguidas, sin parar tanto."
-    await espera.edit_text(respuesta[:4096])
+    await espera.edit_text(
+        respuesta[:4096],
+        reply_markup=teclado_traduccion(context, r["feedback"], "es", ex["language"], ex["level"]),
+    )
 
     await _cerrar_nivel(update.message, context)
     return True
