@@ -12,13 +12,13 @@ import os
 import sys
 from collections import Counter
 
-from exam import questions_a1, questions_a2, questions_b1
+from exam import questions_a1, questions_a2, questions_b1, questions_b2
 from exam.listening import CONFIG, generate_listening
 from exam.registro import MOTIVOS, Fallo
 from exam.tts import synthesize
 from exam.void_report import VOID_LOG, descripcion
 
-BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1}
+BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1, "B2": questions_b2}
 
 
 def _anuladas_desde(linea_inicial: int) -> list[dict]:

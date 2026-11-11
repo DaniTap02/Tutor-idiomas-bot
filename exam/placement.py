@@ -1,6 +1,7 @@
 """Lógica de ubicación: el examen se detiene en el primer nivel que NO se pasa."""
 
 LEVELS = ["A1", "A2", "B1", "B2"]
+ULTIMO_NIVEL = LEVELS[-1]   # B2: aprobarlo termina el currículo del semestre
 MIN_PER_PART = 60   # cada parte (lectura, escucha, escritura, habla) debe sacar al menos esto
 MIN_AVERAGE = 70    # y el promedio de las partes evaluadas al menos esto
 
@@ -17,11 +18,16 @@ def level_passed(
     return all(s >= MIN_PER_PART for s in scores) and sum(scores) / len(scores) >= MIN_AVERAGE
 
 
+def termino_curriculo(level: str, passed: bool) -> bool:
+    """True si aprobó el último nivel (B2): el estudiante terminó el currículo del semestre."""
+    return passed and level == ULTIMO_NIVEL
+
+
 def next_step(level: str, passed: bool) -> dict:
     """Qué hacer después de rendir `level`.
 
     - Pasó y hay más niveles  -> examen del siguiente nivel.
-    - Pasó B2                 -> terminó todo el currículo.
+    - Pasó B2                 -> terminó el currículo del semestre ({"action": "done"}).
     - No pasó                 -> queda en enseñanza de ESE nivel.
     """
     i = LEVELS.index(level)

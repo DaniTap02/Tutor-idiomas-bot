@@ -262,6 +262,33 @@ async def caso_examen_completo():
           nuevo["q"] == 0 and nuevo["answers"] == [] and nuevo["l_q"] == 0 and nuevo["scores"] == {})
 
 
+async def aprobar_nivel(log, ctx):
+    await responder_todas_lectura(log, ctx)
+    await responder_todas_escucha(log, ctx)
+    await tf.texto_de_examen(update_texto(log, "A long enough text for the exam writing part."), ctx)
+    await tf.voz_de_examen(update_voz(log, 60), ctx)
+
+
+async def caso_curriculo_completo():
+    print("\n1b) Aprueba A1, A2, B1 y B2: termina el currículo del semestre")
+    log, ctx = [], Ctx()
+    estado["grade"] = lambda *a, **k: nota(90)
+    estado["transcribe"] = lambda ruta, lang: audio_bueno()
+
+    await empezar(log, ctx)
+    niveles = []
+    for _ in range(4):
+        niveles.append(ctx.user_data["examen"]["level"])
+        await aprobar_nivel(log, ctx)
+    check("rindió A1, A2, B1 y B2 seguidos", niveles == ["A1", "A2", "B1", "B2"])
+    check("el examen terminó después de B2", "examen" not in ctx.user_data)
+    check("nivel B2 sin marca de provisional y con el currículo completo",
+          ctx.user_data["nivel"] == {"language": "en", "level": "B2", "provisional": False, "completo": True})
+    check("se le avisa que terminó el currículo del semestre",
+          any("terminaste el currículo del semestre" in t for k, t in log))
+    check("el nivel también queda guardado por idioma", ctx.user_data["niveles"]["en"]["level"] == "B2")
+
+
 async def caso_no_pasa():
     print("\n2) No pasa el nivel: queda en enseñanza de ese nivel")
     log, ctx = [], Ctx()
@@ -650,6 +677,7 @@ async def caso_opciones_largas():
 async def main():
     _instalar_dobles()
     await caso_examen_completo()
+    await caso_curriculo_completo()
     await caso_no_pasa()
     await caso_sin_escucha()
     await caso_audio_sin_tts()

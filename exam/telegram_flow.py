@@ -24,19 +24,19 @@ import httpx
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from exam import historial, questions_a1, questions_a2, questions_b1
+from exam import historial, questions_a1, questions_a2, questions_b1, questions_b2
 from exam.grader import grade
 from exam.listening import CONFIG as ESCUCHA_CONFIG
 from exam.listening import generate_listening
-from exam.placement import level_passed, next_step
+from exam.placement import level_passed, next_step, termino_curriculo
 from exam.question_generator import generate_reading
 from exam.registro import Fallo, describir, medir, registrar_fallo
 from exam.stt import modelo_cargado, transcribe
 from exam.traduccion import revisar_idioma, teclado_traduccion
 from exam.tts import synthesize
 
-# Al crear el examen de B2 solo hay que agregarlo aquí (su escucha ya está en exam/listening.py).
-BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1}
+# Un banco por nivel. B2 es el último nivel del semestre: aprobarlo termina el currículo.
+BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1, "B2": questions_b2}
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ REPETICIONES_AUDIO = 1   # cuántas veces se puede repetir cada audio de la escu
 # Mínimo de segundos de la nota de voz, por nivel (los SPEAKING_PROMPT piden 15-30 s en A1,
 # 30-45 s en A2 y 45-60 s en B1). Solo es un filtro rápido para no transcribir audios inservibles:
 # el mínimo que de verdad cuenta son las palabras (grader.MIN_WORDS_SPEAKING).
-MIN_SEGUNDOS_VOZ = {"A1": 12, "A2": 20, "B1": 30, "B2": 30}
+MIN_SEGUNDOS_VOZ = {"A1": 12, "A2": 20, "B1": 30, "B2": 40}
 
 # Calidad mínima de la grabación para que valga la pena calificarla (ver exam/stt.py).
 # OJO: esto NO es una nota de pronunciación, solo mide si la grabación se entiende.
@@ -821,14 +821,16 @@ async def _cerrar_nivel(message, context: ContextTypes.DEFAULT_TYPE):
             f"✅ ¡Pasaste {nivel_rendido}! El examen de {siguiente['level']} aún está en construcción, "
             f"así que tu nivel queda como {siguiente['level']} (provisional)."
         )
-    else:
-        mensaje = "🎉 ¡Completaste todos los niveles del examen!"
+    else:   # pasó B2: terminó el currículo del semestre
+        mensaje = (
+            "🎉 ¡Aprobaste B2 y terminaste el currículo del semestre! "
+            "Puedes seguir repasando con /leccion y /practicar."
+        )
 
-    guardar_nivel(context, {
-        "language": ex["language"],
-        "level": siguiente["level"],
-        "provisional": provisional,
-    })
+    nivel = {"language": ex["language"], "level": siguiente["level"], "provisional": provisional}
+    if termino_curriculo(nivel_rendido, paso):
+        nivel["completo"] = True   # aprobó el último nivel (B2)
+    guardar_nivel(context, nivel)
     context.user_data.pop("examen", None)
     await _responder_largo(message, f"{resumen}\n\n{mensaje}\n\nEscribe /start para ver el menú.")
     if revision_escucha:

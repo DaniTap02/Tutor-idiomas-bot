@@ -47,7 +47,7 @@ MENSAJES = {
 
 # Valores iniciales: calibrar probando con textos reales.
 PENALTY_PER_ERROR = {"A1": 10, "A2": 8, "B1": 6, "B2": 6}
-MIN_WORDS = {"A1": 5, "A2": 20, "B1": 50, "B2": 40}
+MIN_WORDS = {"A1": 5, "A2": 20, "B1": 50, "B2": 60}
 # Hablando se dicen menos palabras que escribiendo, y la transcripción puede perder alguna:
 # el mínimo de la parte de HABLA es más bajo que el de escritura.
 MIN_WORDS_SPEAKING = {"A1": 8, "A2": 20, "B1": 40, "B2": 40}

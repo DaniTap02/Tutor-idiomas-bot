@@ -1,18 +1,18 @@
 """Prueba del examen en ESPAÑOL desde terminal (con Ollama corriendo).
 
-    python -m exam.test_es A1          (o A2, B1)
+    python -m exam.test_es A1          (o A2, B1, B2)
     python -m exam.test_es A2 escucha  (además genera los textos de escucha; sin audio)
 
 Muestra las preguntas de lectura generadas y califica escritos de ejemplo del nivel."""
 import sys
 
-from exam import questions_a1, questions_a2, questions_b1
+from exam import questions_a1, questions_a2, questions_b1, questions_b2
 from exam.grader import grade
 from exam.listening import generate_listening
 from exam.question_generator import generate_reading
 from exam.telegram_flow import _checklist
 
-BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1}
+BANCOS = {"A1": questions_a1, "A2": questions_a2, "B1": questions_b1, "B2": questions_b2}
 
 # Por nivel: (tarea de escritura que se califica, ejemplos)
 MUESTRAS = {
@@ -52,6 +52,23 @@ MUESTRAS = {
             "WhatsApp. Los jóvenes y los adultos las usan para muchas cosas diferentes en su vida."
         ),
     },
+    "B2": {
+        "bueno": (
+            "Estimado señor Pérez: le escribo para presentar una reclamación sobre el servicio de limpieza "
+            "que contraté el viernes pasado. El equipo llegó dos horas tarde y dejó la cocina y el baño sucios. "
+            "Por este motivo, tuve que cancelar una cena familiar y limpiar todo yo misma. Ya he llamado dos "
+            "veces a su oficina y he enviado un correo, pero nadie me ha respondido. Le agradecería que "
+            "enviaran de nuevo al equipo esta semana sin costo o que me devolvieran el dinero. Quedo a la "
+            "espera de su respuesta. Atentamente, Ana Torres"
+        ),
+        "sin solución": (
+            "Estimado señor Pérez: le escribo porque el servicio de limpieza que contraté el viernes fue muy "
+            "malo. El equipo llegó tarde, no trajo los productos necesarios y dejó la cocina y el baño sucios. "
+            "Me sentí muy molesta porque había invitado a mi familia a cenar esa noche y la casa no estaba "
+            "lista. Es la primera vez que contrato su empresa y la experiencia fue muy desagradable para mí "
+            "y para mi familia. Atentamente, Ana Torres"
+        ),
+    },
 }
 
 
@@ -78,6 +95,8 @@ def main():
     # B1 tiene varias tareas: se califica con la de opinión (la de los ejemplos)
     if nivel == "B1":
         checklist = next(t for t in banco.WRITING_TASKS if t["id"] == "opinion")["checklist"]
+    elif nivel == "B2":   # B2: la tarea del correo formal (la de los ejemplos)
+        checklist = next(t for t in banco.WRITING_TASKS if t["id"] == "formal_email")["checklist"]
     else:
         checklist = _checklist(banco, "writing", "es")
     for nombre, texto in MUESTRAS[nivel].items():
