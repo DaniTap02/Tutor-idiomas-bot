@@ -30,9 +30,10 @@ Ubicar al estudiante en su nivel de partida (A1, A2, B1 o B2) en inglés o en es
 No hay banco pregenerado. Para cada pregunta:
 1. El **código** elige el tema entre los permitidos del nivel (cada tema trae su alcance entre paréntesis).
 2. **Ollama** redacta la pregunta. El código baraja las opciones y decide cuál es la correcta.
-3. **Filtros de código:** formato, alfabeto latino, largo, palabras prohibidas del nivel, contexto obligatorio en los temas que lo necesitan, pista de género en pronombres, nada que solo funcione escrito en la escucha.
-4. **Verificación con el modelo** (temperatura 0): exactamente una opción válida, contexto suficiente y nivel correcto.
-5. **Evidencia citada:** el modelo copia las palabras que hacen única la respuesta y el código comprueba que estén de verdad en la pregunta. Sin evidencia, la pregunta se anula.
+3. **Filtros de código:** formato, alfabeto latino, largo, palabras prohibidas del nivel, contexto obligatorio en los temas que lo necesitan, pista de género en pronombres, ninguna opción que deje palabras repetidas, nada copiado de los ejemplos del tema, nada que solo funcione escrito en la escucha.
+4. **Resolver a ciegas** (temperatura 0, solo en lectura): el modelo contesta la pregunta sin ver la clave. Si escoge otra opción, se anula. Con la clave a la vista el verificador tendía a darle la razón; en la prueba real de B1 y B2 así se colaban claves equivocadas.
+5. **Verificación con el modelo** (temperatura 0): exactamente una opción válida, contexto suficiente y nivel correcto.
+6. **Evidencia citada:** el modelo copia las palabras que hacen única la respuesta y el código comprueba que estén de verdad en la pregunta. Sin evidencia, la pregunta se anula.
 
 Lo anulado no se muestra, se registra en `voided_questions.jsonl` y se genera otra. Los mismos controles valen para los ejercicios de las lecciones.
 

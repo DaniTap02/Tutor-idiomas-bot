@@ -37,19 +37,28 @@ Examen de nivel (lectura, escucha, escritura y habla; niveles A1–B2) → lecci
 - La retroalimentación de las lecciones va en el idioma que se estudia; la del examen sigue en español (`grader.grade(..., ui_language=...)`).
 - `bot.py` carga el `.env` ANTES de importar los módulos, para que las variables `OLLAMA_*` y `LARA_*` del `.env` se apliquen.
 
+## Pruebas con servicios reales (PC nuevo, 13 de noviembre de 2026)
+- `pytest`: 13 passed. `exam.diagnostico`: 17 bien, 0 fallas (Ollama, edge-tts, Whisper base).
+- Lara real funciona: Node 26.13.1 LTS instalado con winget, credenciales en `.env`, `probar_lara` OK.
+- Ollama real: cada `test_*` tarda 3–5 min (ya no hay ReadTimeout). A1/A2 bien.
+- **B1/B2 dejaban pasar claves equivocadas** ("de acuerdo en mí", "Para que llegues, te esperaré") y el
+  modelo copiaba los ejemplos entre paréntesis de los temas. Se agregó a `question_generator.py`:
+  resolver a ciegas (`blind_mismatch`, `EXAM_RESOLVER_A_CIEGAS`), opción incorrecta con palabra repetida
+  (`redundant_option`), copia de ejemplo del tema (`copied_example`) y pregunta sin blanco ni "?".
+  Tras el cambio quedan ~1–2 preguntas flojas de 10 en B2 (oraciones gramaticales pero sin lógica, dos
+  respuestas posibles) y el tiempo subió ~15 %. `listening.py` todavía no tiene el resolver a ciegas.
+- **El calificador es demasiado generoso** (A2: texto con errores = 100; falta un requisito = completo;
+  B2: carta sin solución = 100). Pendiente arreglarlo en otra fase.
+
 ## Lo que FALTA (siguiente paso)
-Nada se ha probado todavía con servicios reales. En el PC original Ollama era demasiado lento: `test_a1` y `test_a2` agotaron los 15 minutos por ReadTimeout. Pendiente en el PC nuevo:
-1. `python -m pytest`: debe dar 13 passed (corre sin Ollama, Telegram ni Lara).
-2. `python -m exam.diagnostico`, para revisar Ollama, la voz y Whisper.
-3. Con Ollama real: `python -m exam.test_a1`, `test_a2`, `test_b1 lectura`, `test_b2 lectura` (en y es) y `test_es B2`. Revisar la calidad de las preguntas, sobre todo B2 y las explicaciones de las lecciones, y los tiempos.
-4. Lara real: credenciales en `.env` (`LARA_ACCESS_KEY_ID`/`SECRET`), Node 22.23.4+, y luego `python -m mcp_cliente.probar_lara`.
-5. Telegram real (`python bot.py`):
+1. Arreglar el calificador (ver arriba).
+2. Telegram real (`python bot.py`):
    - examen completo (escribir una vez en otro idioma para ver el aviso de Lara);
    - `/leccion`, fallando un ejercicio para ver que se repite el tema;
    - `/practicar`, `/traducir`, `/idioma` y `/puntos`;
    - `/recordatorio` dos minutos adelante para ver que se envía solo, y después `/recordatorio off`.
-6. Ajustar según lo que salga y anotarlo aquí.
-7. Después: pegar los textos de `docs/wiki/` en la wiki de GitHub, preparar la demo con `docs/guion_demo.md` y, si da el tiempo, la comparación fonética y la evaluación con usuarios.
+3. Ajustar según lo que salga y anotarlo aquí.
+4. Después: pegar los textos de `docs/wiki/` en la wiki de GitHub, preparar la demo con `docs/guion_demo.md` y, si da el tiempo, la comparación fonética y la evaluación con usuarios.
 
 ## Comandos útiles
 - Todas las pruebas sin servicios: `python -m pytest`

@@ -279,6 +279,7 @@ Copia `.env.example` como `.env` y pon tu token de Telegram (y, si quieres, las 
 | `EXAM_WORKERS` | `1` | Preguntas generadas en paralelo (más de 1 ahoga la RAM) |
 | `EXAM_LISTENING_N` | el del nivel (3) | Cuántos audios de escucha; `2` para probar más rápido |
 | `EXAM_EXIGIR_EVIDENCIA` | `1` | `0` desactiva la evidencia citada (genera más rápido, deja pasar ambiguas) |
+| `EXAM_RESOLVER_A_CIEGAS` | `1` | `0` desactiva el paso en que el modelo resuelve la pregunta sin ver la clave (una llamada menos por pregunta, deja pasar claves equivocadas) |
 | `EXAM_VOID_LOG` | `voided_questions.jsonl` | Registro de preguntas anuladas |
 | `WHISPER_MODEL` | `base` | `tiny`, `base`, `small`, `medium` |
 | `WHISPER_DEVICE` | `cpu` | `cuda` con GPU NVIDIA con VRAM suficiente |

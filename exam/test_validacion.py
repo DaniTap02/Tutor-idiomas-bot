@@ -54,6 +54,23 @@ check("con la regla -> pasa",
       problema("It is the law. You ___ wear a seatbelt in a car.", "must", ["are", "to"], T_MUST) is None)
 check("'had had' y 'that that' no se consideran repetición",
       problema("Yesterday I ___ a cold.", "had had", ["have", "has"], "Simple past") is None)
+# Caso real de B2 en español: una opción INCORRECTA repetía la palabra que sigue al blanco
+check("'___ llegues' con la opción 'Cuando llegues' -> anulada (redundant_option)",
+      problema("Llegaré a las 3. ___ llegues, te esperaré en la entrada.", "Para que",
+               ["Cuando llegues", "Antes de que"], "Conectores") == "redundant_option")
+
+# Casos reales de B2: el modelo copiaba los ejemplos del tema dentro de la pregunta
+T_FUT_B2 = "Future continuous and future perfect (This time tomorrow I will be flying; By 2030 she will have finished her degree)"
+check("copia 'By 2030 she will have finished her degree' del tema -> anulada (copied_example)",
+      problema("By 2030 she will have finished her degree. Now she ___ hard.",
+               "studies", ["study", "studying"], T_FUT_B2) == "copied_example")
+check("usa el mismo tiempo verbal sin copiar el ejemplo -> pasa",
+      problema("Tom starts his new job on Monday. This time next week he ___ there.",
+               "will be working", ["works", "worked"], T_FUT_B2) is None)
+check("sin espacio en blanco y sin signo de pregunta -> anulada (format)",
+      problema("She is in her third year. She will finish soon.", "will finish", ["finished", "finishes"], "t") == "format")
+check("pregunta sin blanco pero con '?' -> pasa",
+      problema("What do you wear on your feet?", "Shoes", ["Gloves", "Hats"], "Clothes") is None)
 
 print("\n2) La verificación con el modelo ve la ORACIÓN COMPLETA")
 vistos = []
@@ -126,7 +143,28 @@ check("la evidencia puede estar en la opción correcta",
 check("si el modelo no devuelve el campo -> anulada",
       qg._evidencia_ok(None, Q_HERMANO, ["younger"]) is False)
 
-print("\n4) Pipeline completo: lo defectuoso se anula, se registra y se genera otra")
+print("\n4) RESOLVER A CIEGAS: el modelo contesta sin ver la clave")
+# Caso real de B1 en español: el verificador aceptó "en" como clave de "¿estás de acuerdo ___ mí?"
+Q_ACUERDO = "Creo que el café es mejor que el té, ¿estás de acuerdo ___ mí?"
+OP_ACUERDO = ["de", "con", "en"]
+modelo.respuesta = {"reason": "Se dice 'de acuerdo con'.", "answer": 2}
+check("el modelo escoge 'con' y la clave es 'en' -> anulada (blind_mismatch)",
+      qg._resolver_a_ciegas(Q_ACUERDO, OP_ACUERDO, 2, "es", "B1") == "blind_mismatch")
+check("el modelo escoge 'con' y la clave es 'con' -> pasa",
+      qg._resolver_a_ciegas(Q_ACUERDO, OP_ACUERDO, 1, "es", "B1") is None)
+check("las opciones van numeradas desde 1 y como oración completa",
+      "1. Creo que el café es mejor que el té, ¿estás de acuerdo de mí?" in vistos[-1])
+check("el resolvedor no ve cuál es la clave", "correct" not in vistos[-1].lower())
+modelo.respuesta = {"reason": "", "answer": "2"}
+check("acepta el número como texto", qg._resolver_a_ciegas(Q_ACUERDO, OP_ACUERDO, 1, "es", "B1") is None)
+modelo.respuesta = {"reason": "", "answer": 7}
+check("número fuera de rango -> anulada (verify_error)",
+      qg._resolver_a_ciegas(Q_ACUERDO, OP_ACUERDO, 1, "es", "B1") == "verify_error")
+modelo.respuesta = {"reason": "no sé"}
+check("sin respuesta -> anulada (verify_error)",
+      qg._resolver_a_ciegas(Q_ACUERDO, OP_ACUERDO, 1, "es", "B1") == "verify_error")
+
+print("\n5) Pipeline completo: lo defectuoso se anula, se registra y se genera otra")
 guion = [
     {"q": "My brother is ___ than my sister.", "correct": "Taller", "wrong": ["Younger", "Shorter"]},
     {"q": "I have ___ short hair.", "correct": "Short", "wrong": ["Brown", "Long"]},
@@ -137,6 +175,10 @@ estado = {"i": 0}
 
 
 def modelo2(system, user, temperature=0.1):
+    if system.startswith("You are an expert"):
+        # simula un estudiante que acierta: escoge la oración con 'younger'
+        lineas = [l for l in user.splitlines() if l[:2] in ("1.", "2.", "3.")]
+        return {"reason": "", "answer": next(int(l[0]) for l in lineas if "younger" in l)}
     if "checking a multiple-choice question" in system:
         # simula un verificador razonable: solo la opción 'younger' es válida
         return {"valid": [("younger" in line) for line in user.splitlines() if line[:2] in ("0.", "1.", "2.")],

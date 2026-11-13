@@ -7,11 +7,15 @@ correcta; el LLM solo redacta UNA pregunta por tema. Antes de mostrar una pregun
      - formato válido (3 opciones distintas y cortas, sin letras A/B/C, un solo espacio en blanco),
      - alfabeto latino, sin adivinanzas, sin imágenes, largo máximo,
      - palabras prohibidas del nivel (inglés),
-     - la respuesta correcta NO puede producir palabras repetidas ("short short hair"),
+     - ninguna opción puede producir palabras repetidas ("short short hair", "Cuando llegues llegues"):
+       si es la correcta, la oración queda mal; si es una incorrecta, la pregunta está mal armada,
      - temas que necesitan CONTEXTO (comparativos, pronombres, modales, futuro...): la pregunta debe
        traer una frase de contexto antes de la frase con el espacio en blanco,
      - pronombres con género (he/his/her...): el contexto debe mostrar el género (brother, sister...).
-  B) VERIFICACIÓN CON EL MODELO (una sola llamada, temperatura 0): se le muestra la ORACIÓN COMPLETA con
+  B) RESOLVER A CIEGAS (una llamada, temperatura 0): el modelo contesta la pregunta como un estudiante,
+     SIN saber cuál es la clave. Si escoge otra opción, la clave está mal o la pregunta es ambigua y se
+     anula. Va antes de C) porque, revisando con la clave a la vista, el modelo tiende a darle la razón.
+  C) VERIFICACIÓN CON EL MODELO (una sola llamada, temperatura 0): se le muestra la ORACIÓN COMPLETA con
      cada opción puesta en el espacio en blanco y responde: qué oraciones son válidas, si el contexto
      alcanza, si el nivel es correcto y si la pregunta mide el tema. Debe haber EXACTAMENTE una oración
      válida y ser la marcada como correcta.
@@ -65,6 +69,10 @@ _LOG_LOCK = threading.Lock()
 # esté de verdad en la pregunta. Es el filtro más fuerte contra preguntas ambiguas, pero anula más
 # preguntas y por tanto genera más despacio: EXAM_EXIGIR_EVIDENCIA=0 lo desactiva.
 EXIGIR_EVIDENCIA = os.getenv("EXAM_EXIGIR_EVIDENCIA", "1") != "0"
+# El modelo contesta la pregunta sin ver la clave (ver _resolver_a_ciegas). En la prueba real de B1 y B2
+# era lo que faltaba: preguntas con la clave equivocada pasaban la verificación. Cuesta una llamada más
+# por pregunta: EXAM_RESOLVER_A_CIEGAS=0 lo desactiva.
+RESOLVER_A_CIEGAS = os.getenv("EXAM_RESOLVER_A_CIEGAS", "1") != "0"
 
 # Valor por defecto (A1). "may" no se incluye: es el mes.
 DEFAULT_FORBIDDEN_RE = re.compile(r"\b(will|would|could|should|must|might|been|being|going to)\b", re.I)
@@ -82,6 +90,12 @@ RIDDLE = re.compile(r"\b(what|who) am i\b|\bif i am not\b", re.I)   # adivinanza
 REPEATED_WORD = re.compile(r"\b(\w+)\s+\1\b", re.I)
 ALLOWED_REPEATS = {"had", "that"}
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+
+# Los temas traen ejemplos entre paréntesis ("By 2030 she will have finished her degree"). El modelo
+# tiende a copiarlos dentro de la pregunta: queda una oración pegada sin sentido y el examen se repite.
+# Se anula si la pregunta contiene COPIA_N palabras seguidas de un ejemplo del tema.
+EJEMPLOS_TEMA = re.compile(r"\(([^)]*)\)")
+COPIA_N = 5
 
 # Pronombres con género y palabras que dejan claro el género en el contexto (inglés / español).
 GENDERED_OPTIONS = {"he", "she", "him", "his", "her", "hers", "él", "ella", "su", "sus"}
@@ -228,6 +242,15 @@ Reply ONLY with JSON:
 {{"valid": [true or false, ...], "context_enough": true or false, "level_ok": true or false,
   "tests_topic": true or false, "evidence": "..."}}"""
 
+SOLVE_PROMPT = """You are an expert {language} teacher answering a multiple-choice question of a CEFR {level} exam.
+You receive the question and the options. When the question has a blank, each option is shown as the
+FULL sentence that results. If a text is given, the answer must come from the text.
+Choose the ONE option that is grammatically correct, natural and consistent with everything written
+in the question. Judge only what is written: do not guess what the author had in mind.
+First write ONE short sentence with your reasoning, then the number of the option you choose.
+
+Reply ONLY with JSON: {{"reason": "...", "answer": 1, 2 or 3}}"""
+
 
 def _is_true(v) -> bool:
     return v is True or str(v).lower() == "true"
@@ -306,6 +329,18 @@ def _n_sentences(q: str) -> int:
     return len([s for s in SENTENCE_SPLIT.split(q.strip()) if s])
 
 
+def _copia_ejemplo(q: str, topic: str) -> bool:
+    """True si la pregunta copia COPIA_N palabras seguidas de algún ejemplo entre paréntesis del tema."""
+    palabras_q = " " + " ".join(re.findall(r"\w+", q.lower())) + " "
+    for grupo in EJEMPLOS_TEMA.findall(topic or ""):
+        for ejemplo in re.split(r"[;/]", grupo):
+            p = re.findall(r"\w+", ejemplo.lower())
+            for i in range(len(p) - COPIA_N + 1):
+                if " " + " ".join(p[i:i + COPIA_N]) + " " in palabras_q:
+                    return True
+    return False
+
+
 def _format_problem(q: str, options: list[str], language: str, banco=None, text: str | None = None,
                     correct: str | None = None, topic: str = "") -> str | None:
     """Devuelve None si la pregunta pasa los filtros de código, o el MOTIVO por el que se anula."""
@@ -355,12 +390,18 @@ def _format_problem(q: str, options: list[str], language: str, banco=None, text:
         if forbidden.search(joined):
             return "forbidden_word"
 
+    if text is None and not BLANK.search(q) and not q.rstrip().endswith("?"):
+        return "format"   # ni espacio en blanco ni pregunta: el estudiante no sabe qué se le pide
+    if topic and _copia_ejemplo(q, topic):
+        return "copied_example"
+
     if text is None and BLANK.search(q):
-        # La respuesta correcta no puede dejar palabras repetidas ("I have short short hair")
-        if correct is not None:
-            for m in REPEATED_WORD.finditer(_filled(q, correct)):
-                if m.group(1).lower() not in ALLOWED_REPEATS:
-                    return "redundant"
+        # Ninguna opción puede dejar palabras repetidas. Si es la correcta ("I have short short hair"),
+        # la oración queda mal; si es una incorrecta ("___ llegues" con "Cuando llegues"), el modelo
+        # pensó la oración con esa opción y la pregunta está mal armada.
+        for o in options:
+            if any(m.group(1).lower() not in ALLOWED_REPEATS for m in REPEATED_WORD.finditer(_filled(q, o))):
+                return "redundant" if correct is None or o == correct else "redundant_option"
         # Temas que necesitan contexto: una frase de contexto antes de la frase con el espacio en blanco
         if topic and _topic_in(topic, banco, "CONTEXT_TOPICS", language) and _n_sentences(q) < 2:
             return "no_context"
@@ -377,16 +418,43 @@ def _format_ok(q: str, options: list[str], language: str, banco=None, text: str 
     return _format_problem(q, options, language, banco, text, correct, topic) is None
 
 
+def _listing(q: str, options: list[str], text: str | None = None, start: int = 0) -> str:
+    """Lo que ve el modelo: el texto (si hay), la pregunta y cada opción (la oración completa si hay blanco)."""
+    if BLANK.search(q):
+        body = "Question: " + q + "\nFull sentence with each option:\n" + "\n".join(
+            f"{i}. {_filled(q, o)}" for i, o in enumerate(options, start)
+        )
+    else:
+        body = "Question: " + q + "\nOptions:\n" + "\n".join(f"{i}. {o}" for i, o in enumerate(options, start))
+    return (f"Text: {text}\n\n" if text else "") + body
+
+
+def _resolver_a_ciegas(q: str, options: list[str], answer: int, language: str, level: str,
+                       text: str | None = None) -> str | None:
+    """El modelo contesta la pregunta SIN ver la clave (1 llamada, temperatura 0).
+
+    Si escoge otra opción, la clave está mal o hay dos respuestas posibles: se anula. Es el filtro que
+    faltaba en B1 y B2: con la clave a la vista, el verificador tendía a darle la razón (en la prueba real
+    pasaron "¿estás de acuerdo en mí?" y "Para que llegues, te esperaré"). Las opciones van numeradas
+    desde 1 porque un modelo pequeño se confunde menos así. Devuelve None si coincide, o el motivo."""
+    try:
+        data = _call_ollama(
+            SOLVE_PROMPT.format(language=LANGUAGE_NAME[language], level=level),
+            _listing(q, options, text, start=1),
+            temperature=0.0,
+        )
+        elegida = int(str(data.get("answer")).strip().rstrip("."))
+    except Exception:
+        return "verify_error"
+    if not 1 <= elegida <= len(options):
+        return "verify_error"
+    return None if elegida - 1 == answer else "blind_mismatch"
+
+
 def _validate(q: str, options: list[str], answer: int, language: str, level: str, topic: str,
               text: str | None = None) -> str | None:
     """Verificación con el modelo (1 llamada, temperatura 0). Devuelve None si pasa, o el motivo."""
-    if BLANK.search(q):
-        body = "Question: " + q + "\nFull sentence with each option:\n" + "\n".join(
-            f"{i}. {_filled(q, o)}" for i, o in enumerate(options)
-        )
-    else:
-        body = "Question: " + q + "\nOptions:\n" + "\n".join(f"{i}. {o}" for i, o in enumerate(options))
-    listing = (f"Text: {text}\n\n" if text else "") + body
+    listing = _listing(q, options, text)
     try:
         verdict = _call_ollama(
             VALIDATE_PROMPT.format(language=LANGUAGE_NAME[language], level=level, topic=topic),
@@ -512,7 +580,9 @@ def _make_question(kind: str, topic: str, banco, language: str, qtype: str | Non
 
         random.shuffle(options)  # el código decide la posición de la respuesta
         answer = options.index(correct)
-        problem = _validate(q, options, answer, language, level, topic, text)
+        problem = (_resolver_a_ciegas(q, options, answer, language, level, text) if RESOLVER_A_CIEGAS else None)
+        if not problem:
+            problem = _validate(q, options, answer, language, level, topic, text)
         if problem:
             void(problem)
             continue

@@ -78,6 +78,11 @@ def ollama_falso(system: str, user: str, temperature: float = 0.1) -> dict:
         correcta, malas = RESPUESTA[idioma]
         estado["correcta"] = correcta
         return {"text": _texto(system, n, idioma), "q": PREGUNTA_AUDIO[idioma], "correct": correcta, "wrong": malas}
+    if system.startswith("You are an expert"):   # resolver a ciegas: escoge la opción correcta
+        opciones = re.findall(r"^(\d+)\. (.*)$", user, re.M)
+        correcta = estado["correcta"]
+        elegida = next(i for i, o in opciones if o == correcta or f" {correcta} " in f" {o} ")
+        return {"reason": "", "answer": int(elegida)}
     if "checking a LISTENING question" in system or "checking a multiple-choice question" in system:
         opciones = re.findall(r"^(\d+)\. (.*)$", user, re.M)
         correcta = estado["correcta"]

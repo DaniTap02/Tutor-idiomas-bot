@@ -120,7 +120,7 @@ check("palabra prohibida en A2 español ('he estado') -> forbidden_word",
       problema("Ya ___ en Lima. He estado allí dos veces.", "estuve", ["estoy", "estaré"],
                tema(A2, "Pretérito indefinido")) == "forbidden_word")
 check("el filtro de INGLÉS no se aplica al español (A1: 'will' no existe en español)",
-      problema("Mi amigo se llama Will.", "Will", ["Ana", "Luis"], "Saludos", questions_a1) is None)
+      problema("Mi amigo se llama Will. Él ___ de Canadá.", "es", ["son", "soy"], "Saludos", questions_a1) is None)
 check("el examen en inglés sigue aplicando su filtro ('would' en A2)",
       problema("I would go there. She ___ swim.", "can", ["is", "are"], "Modals can/could", A2, "en") == "forbidden_word")
 
