@@ -9,3 +9,4 @@ diagnostico_audio/
 voided_questions.jsonl
 *.db
 .vscode/
+Tutor_T.csv
