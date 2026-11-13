@@ -172,7 +172,7 @@ SPEAKING_PROMPT = {
 TASK_CHECKLIST = {
     "writing": [
         {"id": "req1", "check": "the student says where they went (a place or a trip)", "label_es": "a dónde fuiste"},
-        {"id": "req2", "check": "the student says something they did, using the past tense", "label_es": "qué hiciste (en pasado)"},
+        {"id": "req2", "check": "the student says something they did, using the past tense", "label_es": "qué hiciste (en pasado)", "patron": "pasado"},
         {"id": "req3", "check": "the student says something they ate, saw or bought", "label_es": "qué comiste o viste"},
         {"id": "req4", "check": "the student says something they liked", "label_es": "algo que te gustó"},
     ],

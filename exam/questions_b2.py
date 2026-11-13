@@ -277,7 +277,8 @@ WRITING_TASKS = [
             {"id": "req1", "check": "the student gives at least one argument in favour of working from home", "label_es": "un argumento a favor"},
             {"id": "req2", "check": "the student gives at least one argument against it", "label_es": "un argumento en contra"},
             {"id": "req3", "check": "the student finishes with a clear personal conclusion", "label_es": "tu conclusión"},
-            {"id": "req4", "check": "the student uses linking words to connect or contrast ideas (however, although, whereas, sin embargo, aunque...)", "label_es": "conectores para unir o contrastar ideas"},
+            {"id": "req4", "check": "the student uses linking words to connect or contrast ideas (however, although, whereas, sin embargo, aunque...)", "label_es": "conectores para unir o contrastar ideas",
+             "patron": "conectores_b2", "basta": True},
         ],
     },
 ]

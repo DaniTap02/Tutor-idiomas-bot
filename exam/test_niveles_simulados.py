@@ -93,6 +93,10 @@ def ollama_falso(system: str, user: str, temperature: float = 0.1) -> dict:
             evidencia = "near the park" if idioma == "en" else "cerca del parque"
         return {"valid": validas, "context_enough": True, "level_ok": True, "tests_topic": True,
                 "said_in_audio": True, "one_listen": True, "speakable": True, "evidence": evidencia}
+    if "proofreader" in system:     # corrector: deja todas las oraciones como están
+        return {"items": re.findall(r"^\d+\. (.*)$", user, re.M)}
+    if system.startswith("You check if"):   # segunda revisión de requisitos: todos se cumplen
+        return {"items": [{"ok": True, "why": ""}] * len(re.findall(r"^\d+\. requirement:", user, re.M))}
     if system.startswith("You are a fair"):
         ids = re.findall(r"^   (\w+): ", system, re.M)
         return {"is_in_language": True, "requirements": {i: {"ok": True, "why": ""} for i in ids},

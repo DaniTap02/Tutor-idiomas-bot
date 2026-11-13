@@ -42,7 +42,10 @@ Lo anulado no se muestra, se registra en `voided_questions.jsonl` y se genera ot
 - Juzga el **significado**, nunca compara con una respuesta esperada.
 - Acepta contracciones, sinónimos, variantes regionales (ustedes/vosotros, carro/coche) y erratas que no cambian el sentido.
 - Si falta un requisito, dice **qué falta y por qué**.
-- Antes de calificar, **Lara (`detect_language`)** comprueba el idioma: si el texto está claramente en otro, se pide de nuevo **sin contar el intento**.
+- **Requisitos con cita:** el modelo copia las palabras del estudiante que cumplen cada requisito y el código comprueba que estén en el texto. Una segunda consulta, que solo juzga el contenido y no la gramática, confirma que esa cita de verdad cumple el requisito (así «me quedé en casa» ya no cuenta como «a dónde fuiste»). Los requisitos de forma que el código sabe revisar (conectores, verbos en pasado) los decide un patrón, no el modelo.
+- **Errores por comparación:** el modelo corrige cada oración y el código compara el original con la corrección; cada cambio es un error. Así se encontraron errores que antes se perdían («My name Laura», «Yo es de Colombia»). La puntuación y las mayúsculas no cuentan.
+- Si el modelo falla en cualquiera de estos pasos, no se cuenta nada en contra del estudiante.
+- Antes de calificar, **Lara (`detect_language`)** comprueba el idioma: si el texto está claramente en otro, se pide de nuevo **sin contar el intento**. Si Lara no está, el código cuenta palabras frecuentes de cada idioma.
 - En español, las tildes que faltan no cuentan en A1 y A2. En la parte de habla nunca cuentan, porque las pone Whisper.
 
 ## Español espejo

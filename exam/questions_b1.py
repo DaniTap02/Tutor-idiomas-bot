@@ -294,7 +294,7 @@ WRITING_TASKS = [
         "checklist": [
             {"id": "req1", "check": "the story begins with or clearly continues from the given first sentence (a rainy Saturday, the student at home, the phone ringing)", "label_es": "continuar la frase inicial"},
             {"id": "req2", "check": "the student tells at least three events in a clear order (first, then, finally or similar)", "label_es": "contar qué pasó primero, después y al final"},
-            {"id": "req3", "check": "the events are told in the past tense", "label_es": "usar el pasado"},
+            {"id": "req3", "check": "the events are told in the past tense", "label_es": "usar el pasado", "patron": "pasado"},
         ],
     },
     {
@@ -314,7 +314,8 @@ WRITING_TASKS = [
         "checklist": [
             {"id": "req1", "check": "the student gives a clear personal opinion about whether social media is good or bad for young people", "label_es": "tu opinión"},
             {"id": "req2", "check": "the student gives at least two reasons or examples", "label_es": "al menos dos razones"},
-            {"id": "req3", "check": "the student uses at least one linking word such as because, however, although, so, in addition (or its equivalent in the language of the text)", "label_es": "algún conector (because/porque, however/sin embargo, although/aunque...)"},
+            {"id": "req3", "check": "the student uses at least one linking word such as because, however, although, so, in addition (or its equivalent in the language of the text)", "label_es": "algún conector (because/porque, however/sin embargo, although/aunque...)",
+             "patron": "conectores", "basta": True},
         ],
     },
 ]
@@ -339,7 +340,7 @@ TASK_CHECKLIST = {
     "writing": WRITING_TASKS[0]["checklist"],
     "speaking": [
         {"id": "req1", "check": "the student describes a memorable experience in the past (a trip, an event or similar)", "label_es": "una experiencia pasada memorable"},
-        {"id": "req2", "check": "the student says what happened, using past tenses", "label_es": "qué pasó (en pasado)"},
+        {"id": "req2", "check": "the student says what happened, using past tenses", "label_es": "qué pasó (en pasado)", "patron": "pasado"},
         {"id": "req3", "check": "the student gives an opinion or says how they felt about the experience", "label_es": "tu opinión o cómo te sentiste"},
     ],
 }

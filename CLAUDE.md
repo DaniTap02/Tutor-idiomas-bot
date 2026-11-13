@@ -47,18 +47,23 @@ Examen de nivel (lectura, escucha, escritura y habla; niveles A1–B2) → lecci
   (`redundant_option`), copia de ejemplo del tema (`copied_example`) y pregunta sin blanco ni "?".
   Tras el cambio quedan ~1–2 preguntas flojas de 10 en B2 (oraciones gramaticales pero sin lógica, dos
   respuestas posibles) y el tiempo subió ~15 %. `listening.py` todavía no tiene el resolver a ciegas.
-- **El calificador es demasiado generoso** (A2: texto con errores = 100; falta un requisito = completo;
-  B2: carta sin solución = 100). Pendiente arreglarlo en otra fase.
+- **El calificador era demasiado generoso** (texto con errores = 100; "me quedé en casa" = "a dónde
+  fuiste"; carta sin solución = completa; español en el examen de inglés = 100). Se rehízo `grader.py`:
+  errores = el modelo corrige cada oración y el código compara (difflib); requisitos con cita comprobada
+  + segunda revisión solo de contenido (`REQ_CHECK_PROMPT`); patrones de código para conectores y pasado
+  (`PATRONES`, campos `patron`/`basta` en los bancos); idioma por palabras frecuentes. Con Ollama real:
+  24/24 muestras como se esperaba, 15–27 s por escrito (antes 8–15 s). Falla conocida: la segunda
+  revisión a veces quita un requisito que sí está (A2 es: «comimos pescado» no contó como "qué comiste")
+  y a veces explica en inglés lo que falta.
 
 ## Lo que FALTA (siguiente paso)
-1. Arreglar el calificador (ver arriba).
-2. Telegram real (`python bot.py`):
+1. Telegram real (`python bot.py`):
    - examen completo (escribir una vez en otro idioma para ver el aviso de Lara);
    - `/leccion`, fallando un ejercicio para ver que se repite el tema;
    - `/practicar`, `/traducir`, `/idioma` y `/puntos`;
    - `/recordatorio` dos minutos adelante para ver que se envía solo, y después `/recordatorio off`.
-3. Ajustar según lo que salga y anotarlo aquí.
-4. Después: pegar los textos de `docs/wiki/` en la wiki de GitHub, preparar la demo con `docs/guion_demo.md` y, si da el tiempo, la comparación fonética y la evaluación con usuarios.
+2. Ajustar según lo que salga y anotarlo aquí.
+3. Después: pegar los textos de `docs/wiki/` en la wiki de GitHub, preparar la demo con `docs/guion_demo.md` y, si da el tiempo, la comparación fonética y la evaluación con usuarios.
 
 ## Comandos útiles
 - Todas las pruebas sin servicios: `python -m pytest`
